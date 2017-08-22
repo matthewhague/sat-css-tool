@@ -1,9 +1,34 @@
-# CSS Builder
+# SatCSS
 
-A tool/library for building an abstract representation of a CSS file as a set of
-pairs (selector, declaration) with an ordering (representing the order selectors
-must appear in the CSS file to maintain the overriding semantics).  Can
-also be used to test whether two selectors may match the same node in some DOM.
+Minimise CSS files through semantics-preserving refactoring.  E.g.
+
+    .a { color: red }
+    .b { color: red }
+
+can be refactored
+
+    .a, .b { color: red }
+
+but
+
+    .a { color: red }
+    .c { color: blue }
+    .b { color: red }
+
+cannot, since
+
+    .a, .b { color: red }
+    .c { color: blue }
+
+changes the color of an element with class="b c".
+
+Can also be used to test whether two selectors may match the same node in some DOM.
+
+Can also be used as a tool/library for building an abstract
+representation of a CSS file as a set of pairs (selector, declaration)
+with an ordering (representing the order selectors must appear in the
+CSS file to maintain the overriding semantics).  
+
 
 ## Requirements:
 
