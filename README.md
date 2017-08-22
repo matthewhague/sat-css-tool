@@ -51,7 +51,7 @@ In the same directory as main.py, ensure that running
 
     ./z3
 
-runs the Z3 model checker.  For example, this can be a simlink to the
+runs the Z3 SMT solver.  For example, this can be a simlink to the
 Z3 installed on your machine.  
 
 The tool uses Z3 v4.5.  There have recently been changes to the Z3 API
