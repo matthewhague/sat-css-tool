@@ -38,3 +38,7 @@ for weighted Max-SAT.  Hence, the most up-to-date version as of
     python main.py --help
 
 where "python" is your python 2.7 command.
+
+To try a benchmark:
+
+    python main.py benchmarks/dblp-2015-07-09-stripmq.css
