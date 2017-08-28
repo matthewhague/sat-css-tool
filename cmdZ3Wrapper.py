@@ -589,7 +589,7 @@ class _Z3Solver(object):
                 output.write(')\n')
 
         output.write('(check-sat)\n')
-#        output.write('(get-objectives)')
+        output.write('(get-objectives)')
         output.write('(get-model)')
 
     def __read_response(self, inpipe):
