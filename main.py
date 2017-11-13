@@ -10,7 +10,7 @@ Options:
   -f --full-exclusion          When searching for refactoring, allow all selectors/properties to be excluded from max bicliques, instead of just those in edge order
   -h --help                    Show this screen.
   -i --altminit                Use iterative altminimise (<num rules> is initial estimate of size)
-  -o --output-model            Outputs a new minimised CSS file (currently only compatible with --altmin, and the greedy algorithms)
+  -o --output-model            Outputs a new minimised CSS file (use with --file to write to a file)
   -p --multi-props             Combines multiply defined properties into a single value (e.g. { background: red; background: white } becomes { background: red;white }
   -s --size-only               Only output calculated size of file in bytes
   --anneal=<anneal_type>       Use simulated annealing for deduct refactor, can be none (no annealing), good (only refactorings that decrease size), any (any refactoring) [default: none]
