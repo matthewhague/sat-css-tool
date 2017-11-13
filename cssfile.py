@@ -12,7 +12,7 @@ import cssselect_parser
 multiprop_separator = "#+#"
 
 
-_BAD_ATTR_CHARS = set(" \t\n\r\f\"'`=<>#")
+_BAD_ATTR_CHARS = set(" \t\n\r\f\"'`=<>#/")
 _ID_ESCAPE_CHARS = "\\!\"#$%&'()*+,./:;<=>?@[]^`{|}~"
 
 class CSSFileException(Exception):
