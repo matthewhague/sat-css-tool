@@ -67,3 +67,7 @@ where "python" is your python 2.7 command.
 To try a benchmark:
 
     python main.py benchmarks/dblp-2015-07-09-stripmq.css
+
+To output the file:
+
+    python main.py -o --file=blah.min.css benchmarks/dblp-2015-07-09-stripmq.css 
