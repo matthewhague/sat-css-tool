@@ -1,1 +1,1 @@
-/usr/bin/z3
+/usr/local/bin/z3

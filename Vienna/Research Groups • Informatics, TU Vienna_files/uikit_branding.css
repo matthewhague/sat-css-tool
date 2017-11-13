@@ -1,0 +1,6 @@
+.uikit-page-logo div { width: 215px !important; }
+.uikit-page-logo img { top: 15px; }
+.uikit-page-content { padding-top: 96px; }
+#badge { float:right; margin-top: -1px; margin-right:-134px; }
+#badge img { height:15px; opacity:0.6; }
+#badge img:hover { height:15px; opacity:1; }
