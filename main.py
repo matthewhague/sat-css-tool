@@ -1,7 +1,7 @@
 """Sat-CSS: minimise CSS files by searching for space-saving refactorings.  Can also run in emptiness mode to check intersection of pairs of CSS selectors.
 
 Usage:
-  main.py [-efops] [<file>] [<num_rules>] [--split=<num_rules>] [--file=<output_file>] [--refactor=<technique>] [--anneal=<anneal_type>] [--num-threads=<num>] [--num-parts=<num>] [--intermediate-results=<dir>] [--dimacs-output] [--enumeration-output] [--dont-refactor] [--output-simple] [--write-compact] [--compact-only] [--unopt-emp]
+  main.py [-efops] [<file>] [<num_rules>] [--split=<num_rules>] [--file=<output_file>] [--refactor=<technique>] [--anneal=<anneal_type>] [--num-threads=<num>] [--num-parts=<num>] [--intermediate-results=<dir>] [--dimacs-output] [--enumeration-output] [--dont-refactor] [--output-simple] [--write-compact] [--compact-only] [--unopt-emp] [--unlim-bicliques]
   main.py (-h | --help)
   main.py --version
 
@@ -24,6 +24,7 @@ Options:
   --num-threads=<num>          Add this to specify multiple threads for deduct refactoring search (will try to guess a good number if not supplied)
   --num-parts=<num>            When set to n, each thread will search 1/n of the search space per iteration (covering the whole search space in n iterations) -- a higher number means a faster search, but possibly the best refactoring will not be found (will try to guess a good number if not supplied))
   --unopt-emp                  Use unoptimised emptiness check that does a single large Presburger check
+  --unlim-bicliques            Do not limit the number of orderable bicliques constructed from an unorderable one (by default all unorderable bicliques are simply ignored)
   --version                    Show the version.
   --write-compact              If outputting a model, write it compactly (minified)
 """
@@ -155,6 +156,17 @@ def get_unopt_emp():
     try:
         arguments = docopt(__doc__, version='v0.1')
         return arguments['--unopt-emp']
+    except DocoptExit:
+        return False
+
+def get_unlim_bicliques():
+    """
+    :returns:
+        True iff the user specified that --unlim-bicliques
+    """
+    try:
+        arguments = docopt(__doc__, version='v0.1')
+        return arguments['--unlim-bicliques']
     except DocoptExit:
         return False
 

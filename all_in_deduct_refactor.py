@@ -215,7 +215,11 @@ class _Z3EncoderBiclique(object):
 
         print "Getting bicliques..."
         start_t = default_timer()
-        (max_bicliques, forbidden) = clique.get_orderable_max_bicliques(simple, MAX_SPLIT_FACTOR)
+
+        from main import get_unlim_bicliques
+        split_factor = -1 if get_unlim_bicliques() else MAX_SPLIT_FACTOR
+
+        (max_bicliques, forbidden) = clique.get_orderable_max_bicliques(simple, split_factor)
         end_t = default_timer()
         print "Getting bicliques took", (end_t - start_t), "s"
 

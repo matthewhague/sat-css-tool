@@ -435,6 +435,8 @@ class cliqueCSS:
             If > 0 then produce at most max_split_factor * num_max_bicliques new
             bicliques by splitting unorderable ones into orderable ones.  Once
             this limit is reached, simply stop generating any more.
+            If 0 then throw away unorderable max bicliques
+            If -1 then do not limit
         :returns:
             (bicliques_set, forbidden)
             where
@@ -472,13 +474,17 @@ class cliqueCSS:
         rev_last_index = self.build_rev_last_index_map()
         ignore_rules = self.get_edge_set()
 
-        max_split = int(max_split_factor * len(max_bicliques))
 
-        if max_split == 0:
+        if max_split_factor == 0:
             print "Max split factor is 0, simply ignoring bad bicliques"
             all_bicliques -= bad_bicliques
         else:
-            print "Making at most", max_split, "new bicliques"
+            max_split = -1
+            if max_split_factor >= 0:
+                max_split = int(max_split_factor * len(max_bicliques))
+                print "Making at most", max_split, "new bicliques"
+            else:
+                print "Making any number of new bicliques"
 
             for pos in xrange(num_rules + 1):
                 # can't ignore rules that have had their last index
