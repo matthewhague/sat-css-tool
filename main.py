@@ -1,7 +1,7 @@
 """Sat-CSS: minimise CSS files by searching for space-saving refactorings.  Can also run in emptiness mode to check intersection of pairs of CSS selectors.
 
 Usage:
-  main.py [-efops] [<file>] [<num_rules>] [--split=<num_rules>] [--file=<output_file>] [--refactor=<technique>] [--anneal=<anneal_type>] [--num-threads=<num>] [--num-parts=<num>] [--intermediate-results=<dir>] [--dimacs-output] [--enumeration-output] [--output-simple] [--write-compact] [--compact-only]
+  main.py [-efops] [<file>] [<num_rules>] [--split=<num_rules>] [--file=<output_file>] [--refactor=<technique>] [--anneal=<anneal_type>] [--num-threads=<num>] [--num-parts=<num>] [--intermediate-results=<dir>] [--dimacs-output] [--enumeration-output] [--dont-refactor] [--output-simple] [--write-compact] [--compact-only] [--unopt-emp]
   main.py (-h | --help)
   main.py --version
 
@@ -15,13 +15,15 @@ Options:
   -s --size-only               Only output calculated size of file in bytes
   --anneal=<anneal_type>       Use simulated annealing for deduct refactor, can be none (no annealing), good (only refactorings that decrease size), any (any refactoring) [default: none]
   --compact-only               Simply read in the file, and write it out again minified (use --file to write to a file)
+  --dont-refactor              Do not do refactoring (can be used with --output-simple, but not with --dimacs-only)
   --dimacs-output              Do not do refactoring.  Simply output to tempfiles dimacs versions of the first refactoring search and quit.
   --enumeration-output         Output (Mi, F) enumeration of maximal bicliques and positions at which they're forbidden (use with -d)
   --file=<output_file>         If outputting model, output to the name file
   --intermediate-results <dir> Directory to save the css file after each refactoring in --deduct-refactor mode.  Creates directory if doesn't exist.  If not specified, then no results saved.
-  --output-simple              Output simpleCSS model of css file (only with -d)
+  --output-simple              Output simpleCSS model of css file
   --num-threads=<num>          Add this to specify multiple threads for deduct refactoring search (will try to guess a good number if not supplied)
   --num-parts=<num>            When set to n, each thread will search 1/n of the search space per iteration (covering the whole search space in n iterations) -- a higher number means a faster search, but possibly the best refactoring will not be found (will try to guess a good number if not supplied))
+  --unopt-emp                  Use unoptimised emptiness check that does a single large Presburger check
   --version                    Show the version.
   --write-compact              If outputting a model, write it compactly (minified)
 """
@@ -129,6 +131,14 @@ def get_enumeration_output():
     except DocoptExit:
         return False
 
+def get_dont_refactor():
+    """:returns: whether --dont-refactor was specified on the command line"""
+    try:
+        arguments = docopt(__doc__, version='v0.1')
+        return arguments['--dont-refactor']
+    except DocoptExit:
+        return False
+
 def get_output_simple():
     """:returns: whether --output-simple was specified on the command line"""
     try:
@@ -137,7 +147,16 @@ def get_output_simple():
     except DocoptExit:
         return False
 
-
+def get_unopt_emp():
+    """
+    :returns:
+        True iff the user specified that --unopt-emp
+    """
+    try:
+        arguments = docopt(__doc__, version='v0.1')
+        return arguments['--unopt-emp']
+    except DocoptExit:
+        return False
 
 def _do_model_output(model):
     """Outputs cliqueCSS model to stdout or file depending on cmdline"""

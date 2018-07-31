@@ -73,6 +73,22 @@ def isempty(aut, data=None):
     :returns:
         True iff the automaton is empty
     """
+    from main import get_unopt_emp
+    if get_unopt_emp():
+        isempty_unoptimised(aut, data)
+    else:
+        isempty_optimised(aut, data)
+
+def isempty_optimised(aut, data=None):
+    """Checks using SAT whether the given CSSAutomaton is empty
+
+    :param aut"
+        The automaton to check for emptiness as a CSSAutomaton
+    :param data:
+        Some debug data to print for slow checks
+    :returns:
+        True iff the automaton is empty
+    """
     naut = _normalise_automaton(aut)
     checker = AutEmptinessChecker(naut)
     return checker.check()
@@ -1203,3 +1219,919 @@ class AutEmptinessChecker:
                          pos_fun(get_sum(ns, e), a, b)
                     )
                     for (ns, e) in product(self.nss, self.eles) ])
+
+
+###############################################################################
+# Unoptimised version
+
+def isempty_unoptimised(aut, data=None):
+    """Checks using SAT whether the given CSSAutomaton is empty
+
+    :param aut"
+        The automaton to check for emptiness as a CSSAutomaton
+    :param data:
+        Some debug data to print for slow checks
+    :returns:
+        True iff the automaton is empty
+    """
+    naut = _normalise_automaton(aut)
+    _emp_z3.push()
+
+    enc = _Z3NormAutEnc(naut, _emp_z3)
+    # Uncomment these if you want to inspect the formulas
+    #print aut
+    #set_option(max_args=10000000, max_lines=1000000, max_depth=10000000, max_visited=1000000)
+    #print solver
+    start_t = default_timer()
+    res = _emp_z3.check()
+    end_t = default_timer()
+
+    t = end_t - start_t
+
+    _emp_z3.pop()
+
+    return res == unsat
+
+class _Z3NormAutEnc:
+    """An object encoding the given normalised automaton in Z3"""
+
+    # delta for sibling arrow
+    __delta = Int("dunopt")
+    __nvar = Int("nunopt")
+    __bvar = Int("bunopt")
+
+    def __init__(self, aut, solver):
+        """Constructs a Z3 encoding of aut, adds constraints to solver.
+
+        :param aut:
+            A normalised (with _normalise_automaton) CSSAutomaton
+        :param solver:
+            A Z3 Solver to add the constraints to
+        """
+        self.aut = aut
+        self.solver = solver
+        self.last = self.__has_last_constraints()
+        self.of_type = self.__has_of_type_constraints()
+        # Note, we must have last_of_type => of_type
+        self.last_of_type = self.__has_last_of_type_constraints()
+        self.has_id = self.__has_id_constraints()
+        self.has_target = self.__has_pseudo_elements(set(["target"]))
+        self.__setup_z3_variables()
+        self.__initial_constraints(),
+        self.__final_constraints(),
+        self.__transition_constraints(),
+        self.__variable_constraints()
+
+    def __nth(self, x, a, b):
+        """Returns an existential Presburger clause enforcing
+
+            (E)n . x = an + b
+
+        :param x:
+            z3 Int variable
+        :param a:
+            constant python integer
+        :param b:
+            constant python integer
+        :returns:
+            z3 clause enforcing the above
+        """
+        if a != 0:
+            return Exists([self.__nvar], x == a * self.__nvar + b)
+        else:
+            return x == b
+
+    def __not_nth(self, x, a, b):
+        """Returns an existential Presburger clause enforcing
+
+            not (E)n . x = an + b
+
+        :param x:
+            z3 Int variable
+        :param a:
+            constant python integer
+        :param b:
+            constant python integer
+        :returns:
+            z3 clause enforcing the above
+        """
+        if a == 0:
+            return x != b
+
+        b1 = b / a
+        b2 = b % a
+        bnd__b2 = (
+            (self.__bvar > -abs(a))
+            if (a * b1 < 0)
+            else (self.__bvar < abs(a))
+        )
+        dir__b2 = (
+            (self.__bvar <= 0)
+            if (a * b1 < 0)
+            else (self.__bvar >= 0)
+        )
+        xvsb = (x < b) if a > 0 else (x > b)
+        return Or(xvsb,
+                  Exists([self.__nvar, self.__bvar],
+                         And(bnd__b2,
+                             dir__b2,
+                             self.__bvar != b2,
+                             x == (a*self.__nvar) + (a*b1) + self.__bvar)))
+
+    def __sel_has_pseudo_elements(self, sel, cons, neg_cons = None):
+        """Returns true if selector has any of the of type constraints in cons
+
+        :param sel:
+            The selector in cssselect parsed_tree format
+        :param cons:
+            A python set of strings, the strings being the names of pseudo
+            elements such as "last-of-type"
+        :param neg_cons:
+            If specified, then cons will only refer to positive selectors
+            and neg_cons will be selectors in :not()
+        :returns:
+            True iff there is an selector from cons in sel
+        """
+        if neg_cons is None:
+            neg_cons = cons
+
+        s = sel
+        while type(s).__name__ != "Element":
+            check_sel = s
+            check_cons = cons
+            if type(s).__name__ == "Negation":
+                check_sel = s.subselector
+                check_cons = neg_cons
+            t = type(check_sel).__name__
+            if (t == "Pseudo" and check_sel.ident in check_cons):
+                return True
+            if (t == "Function" and check_sel.name in check_cons):
+                return True
+            s = s.selector
+        return False
+
+    def __has_pseudo_elements(self, cons):
+        """
+        :param cons:
+            A set of pseudo element / function names as strings
+        :returns:
+            True iff something from cons appears in a transition of self.aut
+        """
+        for t in self.aut:
+            if self.__sel_has_pseudo_elements(t.node_selector, cons):
+                return True
+        return False
+
+    def __has_last_constraints(self):
+        cons = set(["nth-last-child",
+                    "nth-last-of-type",
+                    "last-child",
+                    "only-child",
+                    "last-of-type",
+                    "only-of-type"])
+        return self.__has_pseudo_elements(cons)
+
+    def __has_of_type_constraints(self):
+        """Looks through aut to see if it has any "of type" constraints
+
+        :returns:
+            True iff self.aut contains some of type constraints
+        """
+        return self.__has_pseudo_elements(_of_type_cons)
+
+
+    def __has_last_of_type_constraints(self):
+        """Looks through aut to see if it has any "last of type" constraints
+
+        :returns:
+            True iff self.aut contains some of type constraints
+        """
+        cons = set(["nth-last-of-type",
+                    "only-of-type",
+                    "last-of-type"])
+        return self.__has_pseudo_elements(cons)
+
+
+    def __has_id_constraints(self):
+        """:returns: True iff some transitions contain ID constraints"""
+        for t in self.aut:
+            if self.__sel_has_id_constraints(t.node_selector):
+                return True
+        return False
+
+    def __sel_has_id_constraints(self, sel):
+        """
+        :param sel:
+            The selector in cssselect parsed_tree format
+        :returns:
+            True iff there is an ID in sel e.g.  #i
+        """
+        s = sel
+        while type(s).__name__ != "Element":
+            check_sel = s
+            if type(s).__name__ == "Negation":
+                check_sel = s.subselector
+            if (type(check_sel).__name__ == "Hash"):
+                return True
+            s = s.selector
+        return False
+
+    def __setup_z3_variables(self):
+        """Creates the variables for the encoding
+
+            n -- the length of the longest run
+            qsort -- z3 enum for states
+            qvals -- dict from State to z3 values
+            qvars -- array of n state variables
+
+            similarly for prefixes (instead of q)
+
+                ns -- namespaces (e.g. nssort)
+                e -- elements
+                id -- ids
+
+            psvars -- dict from string pseudo element to array of n
+                      boolean variables (e.g. psvars["target"][3] for
+                      whether 3rd point in run has target)
+
+            nchild, nlchild -- arrays of n Int vars for nth child and
+                               nth from last child
+
+            ntchild, nltchild -- dicts from (ns, e) to n Int vars for
+                                 tracking how many elements of type where
+                                 ns is in nsvals and e in evals
+
+            arrvars -- the arrow on the transition used at each position
+            arrvals -- the values as a dict over Arr enum vals
+        """
+
+        comps = self.aut.components()
+
+        self.n = comps.num_trans
+
+        # state variables
+        aut_qs = list(comps.states)
+        self.qsort, vals = EnumSort("State", [q.name for q in aut_qs])
+        self.qvals = {}
+        for q, v in izip(aut_qs, vals):
+            self.qvals[q] = v
+        self.qvars = [Const("q" + str(i), self.qsort)
+                      for i in range(self.n)]
+
+        # namespace and element variables
+        nss = list(comps.namespaces)
+        eles = list(comps.elements)
+        # add dummies for all transitions that might need them
+        i = 0
+        nss.append("_null_ns")
+        eles.append("_null_ele")
+        for t in self.aut:
+            (dummy_ns, dummy_ele) = self.__get_tran_dummies(t)
+            if dummy_ns:
+                nss.append("_dummy_ns" + str(i))
+                i += 1
+            if dummy_ele:
+                eles.append("_dummy_ele" + str(i))
+                i += 1
+
+        self.nssort, vals = EnumSort("Namespace", map(str, nss))
+        self.nsvals = {}
+        for ns, v in izip(nss, vals):
+            self.nsvals[ns] = v
+        self.nsvars = [Const("ns" + str(i), self.nssort)
+                       for i in range(self.n)]
+
+        self.esort, vals = EnumSort("Element", map(str, eles))
+        self.evals = {}
+        for e, v in izip(eles, vals):
+            self.evals[e] = v
+        self.evars = [Const("e" + str(i), self.esort)
+                      for i in range(self.n)]
+
+        if self.has_id:
+            ids = list(comps.ids)
+            self.dummy_id = "_dummy_id"
+            ids.append(self.dummy_id)
+            self.idsort, vals = EnumSort("ID2", map(str, ids))
+            self.idvals = {}
+            for i, v in izip(ids, vals):
+                self.idvals[i] = v
+            self.idvars = [Const("id" + str(i), self.idsort)
+                           for i in range(self.n)]
+
+        self.psvars = {}
+        for ps in _global_ps:
+            self.psvars[ps] = [Bool(ps + str(i)) for i in range(self.n)]
+
+        # nth-child, nth-last-child, and of-type variants
+        self.nchild = [Int("n" + str(i)) for i in range(self.n)]
+        if self.last:
+            self.nlchild = [Int("nl" + str(i)) for i in range(self.n)]
+        if self.of_type:
+            self.ntchild = {}
+            for ns in self.nsvals:
+                for e in self.evals:
+                    self.ntchild[(ns, e)] = (
+                        [Int("nt_" + str(ns) + "_" + str(e) + str(i))
+                         for i in range(self.n)]
+                    )
+        if self.last_of_type:
+            self.nltchild = {}
+            for ns in self.nsvals:
+                for e in self.evals:
+                    self.nltchild[(ns, e)] = (
+                        [Int("nlt_" + str(ns) + "_" + str(e) + str(i))
+                         for i in range(self.n)]
+                    )
+
+        # arrow variables
+        arrows = [a for a in Arrow]
+        self.arrsort, vals = EnumSort("State", [str(a) for a in arrows])
+        self.arrvals = {}
+        for a, v in izip(arrows, vals):
+            self.arrvals[a] = v
+        self.arrvars = [Const("a" + str(i), self.arrsort)
+                        for i in range(self.n)]
+
+
+
+    def __get_tran_dummies(self, t):
+        """
+        :param t:
+            A transition Tran
+        :returns:
+            (dummy_ns, dummy_ele)
+            where dummy_ns is True iff transition implies need for a dummy namespace
+            and dummy_ele is True iff transition implies need for a dummy element
+        """
+        sel = t.node_selector
+
+        # if selector is just * no dummy required
+        if (type(sel).__name__ == "Element" and
+            sel.namespace is None and
+            sel.element is None):
+            return (False, False)
+
+        # else find if it forces namespace or element, and if it has an of-type
+        # requirement
+        is_of_type = self.__sel_has_pseudo_elements(sel, _of_type_cons)
+
+        if not is_of_type:
+            return (False, False)
+
+        while type(sel).__name__ != "Element":
+            sel = sel.selector
+
+        if sel.namespace == None:
+            return (True, False)
+        elif sel.element == None:
+            return (False, True)
+        else:
+            return (False, False)
+
+    def __variable_constraints(self):
+        """Adds consistency constraints on the variables to solver.
+           E.g. nchild > 0 and nchild is sumof ntchild, all IDs unique...
+        """
+        # > 0
+        for v in self.nchild:
+            self.solver.append(v > 0)
+        if self.last:
+            for v in self.nlchild:
+                self.solver.append(v > 0)
+        # of type can be 0 too
+        if self.of_type:
+            for vs in self.ntchild.values():
+                for v in vs:
+                    self.solver.append(v >= 0)
+            # nchild = sum of ntchild
+            for i in range(self.n):
+                self.solver.append(self.nchild[i]
+                                   ==
+                                   Sum([vs[i] for vs in self.ntchild.values()]))
+
+        if self.last_of_type:
+            for vs in self.nltchild.values():
+                for v in vs:
+                    self.solver.append(v >= 0)
+            # nlchild = sum of nltchild
+            for i in range(self.n):
+                self.solver.append(self.nlchild[i]
+                                   ==
+                                   Sum([vs[i] for vs in self.nltchild.values()]))
+
+        # unique target and IDs
+        for i in range(self.n):
+            id_cons = []
+            for j in range(i + 1, self.n):
+                if self.has_id:
+                    id_cons.append(self.idvars[i] != self.idvars[j])
+                if self.has_target:
+                    self.solver.append(Not(And(self.psvars["target"][i],
+                                               self.psvars["target"][j])))
+            if self.has_id:
+                self.solver.append(Or(self.idvars[i] == self.idvals[self.dummy_id],
+                                      And(id_cons)))
+
+        # if a node is not root, the next visited note cannot be root either
+        for i in range(self.n - 1):
+            self.solver.append(Implies(Not(self.psvars["root"][i]),
+                                       Not(self.psvars["root"][i+1])))
+
+    def __initial_constraints(self):
+        """Z3 encoding of constraints on the initial variable assignment (0th pos)
+        added to self.solver
+        """
+        self.solver.append(self.qvars[1] == self.qvals[self.aut.qinit])
+        self.solver.append(self.__first_child_cons(0))
+        self.solver.append(self.psvars["root"][0])
+
+
+    def __final_constraints(self):
+        """Z3 encoding of constraints saying a run has ended added to self.solver
+        """
+        self.solver.append(self.qvars[self.n - 1] == self.qvals[self.aut.qfinal])
+
+    def __transition_constraints(self):
+        """Z3 encoding of transition relation added to self.solver
+        """
+        # Strategy:
+        #
+        #   Work out which states can appear at a position in the run.
+        #   states[i] is the set of states at position i, with a flag to say if
+        #   it was added because of a loop.
+
+        #   Initially states[0] = {q0}
+        #             no_loop = {(0, q0)}
+        #
+        #   Then, for each q1 --> q2, put q2 in the next position.
+        #   For loops, since we can only take a loop once, we deal with the
+        #   separately: if q in states[i] and (i, q) in no_loop, and there are k
+        #   loops, add q to states[i+1..i+k].
+        #
+        #   Treat non-loops q1 --> q2 obviously q1 in states[i] leads to
+        #   q2 in states[i+1] and (i+1, q2) in no_loop.
+        states = defaultdict(set)
+        states[0] = set([self.aut.qinit])
+        no_loop = set([(0, self.aut.qinit)])
+
+        for i in range(self.n - 1):
+            tran_opts = [self.qvars[i] == self.qvals[self.aut.qfinal]]
+            arrows = set([])
+
+            for q in states[i]:
+                loop_dist = 1
+                for t in self.aut.trans_from(q):
+                    tran_opts.append(self.__tran_pres(t, i))
+                    arrows.add(t.arrow)
+                    if t.q1 != t.q2 and i < self.n - 1:
+                        states[i+1].add(t.q2)
+                        no_loop.add((i+1, t.q2))
+                    elif (i, q) in no_loop:
+                        if i + loop_dist < self.n:
+                            states[i + loop_dist].add(q)
+                            loop_dist += 1
+
+            self.solver.append(Or(tran_opts))
+
+            for arr in arrows:
+                next_vals = {
+                    Arrow.child : lambda : self.__arr_child_pres(i),
+                    Arrow.neighbour : lambda : self.__arr_neighbour_pres(i),
+                    Arrow.sibling : lambda : self.__arr_sibling_pres(i),
+                    Arrow.noop : lambda : self.__arr_noop_pres(i)
+                }[arr]()
+                self.solver.append(Implies(
+                    self.arrvars[i] == self.arrvals[arr],
+                    next_vals
+                ))
+
+
+    def _test_sel_pres(self, sel, i):
+        """Non-private access to __sel_pres for testing purposes"""
+        return self.__sel_pres(sel, i)
+
+    def __sel_pres(self, sel, i):
+        """Encodes the node selector sel for the ith position of the run.
+
+        :param sel:
+            The (normalised) node selector in cssselect parsed_tree format
+        :param i:
+            The position in the run to build the formula for
+        :returns:
+            A Z3 formula encoding that the selector is true at the node
+            at position i of the run
+        """
+        cons = []
+        stype = type(sel).__name__
+        if stype == "Element":
+            if sel.namespace is not None:
+                cons.append(self.nsvars[i] == self.nsvals[sel.namespace])
+            if sel.element is not None:
+                cons.append(self.evars[i] == self.evals[sel.element])
+        else:
+            cons.append(self.__sel_pres(sel.selector, i))
+            if stype == "Negation":
+                cons.append(self.__sel_pres_neg(sel.subselector, i))
+            elif stype == "Hash":
+                cons.append(self.idvars[i] == self.idvals[sel.id])
+            elif stype == "Pseudo":
+                if sel.ident == "first-child":
+                    cons.append(Not(self.psvars["root"][i]))
+                    cons.append(self.__nth(self.nchild[i], 0, 1))
+                elif sel.ident == "last-child":
+                    cons.append(Not(self.psvars["root"][i]))
+                    cons.append(self.__nth(self.nlchild[i], 0, 1))
+                elif sel.ident == "only-child":
+                    cons.append(Not(self.psvars["root"][i]))
+                    cons.append(self.__nth(self.nchild[i], 0, 1))
+                    cons.append(self.__nth(self.nlchild[i], 0, 1))
+                elif sel.ident == "first-of-type":
+                    cons.append(Not(self.psvars["root"][i]))
+                    cons.append(self.__nth_of_type(0, 1, i))
+                elif sel.ident == "last-of-type":
+                    cons.append(Not(self.psvars["root"][i]))
+                    cons.append(self.__nth_last_of_type(0, 1, i))
+                elif sel.ident == "only-of-type":
+                    cons.append(Not(self.psvars["root"][i]))
+                    cons.append(self.__nth_of_type(0, 1, i))
+                    cons.append(self.__nth_last_of_type(0, 1, i))
+                else:
+                    cons.append(self.psvars[sel.ident][i])
+            elif stype == "Function":
+                if sel.name == "nth-child":
+                    a, b = cssfile.get_fun_sel_coefs(sel)
+                    cons.append(Not(self.psvars["root"][i]))
+                    cons.append(self.__nth(self.nchild[i], a, b))
+                elif sel.name == "nth-last-child":
+                    a, b = cssfile.get_fun_sel_coefs(sel)
+                    cons.append(Not(self.psvars["root"][i]))
+                    cons.append(self.__nth(self.nlchild[i], a, b))
+                elif sel.name == "nth-of-type":
+                    a, b = cssfile.get_fun_sel_coefs(sel)
+                    cons.append(Not(self.psvars["root"][i]))
+                    cons.append(self.__nth_of_type(a, b, i))
+                elif sel.name == "nth-last-of-type":
+                    a, b = cssfile.get_fun_sel_coefs(sel)
+                    cons.append(Not(self.psvars["root"][i]))
+                    cons.append(self.__nth_last_of_type(a, b, i))
+                else:
+                    raise AutEmptinessException("Unrecognised function selector " +
+                                                str(sel))
+        return And(cons)
+
+    def __sel_pres_neg(self, sel, i):
+        """Encodes the negation of node selector sel for the ith position
+        of the run.
+
+        :param sel:
+            The (normalised) node selector in cssselect parsed_tree format
+        :param i:
+            The position in the run to build the formula for
+        :returns:
+            A Z3 formula encoding that the selector is false at the node
+            at position i of the run
+        """
+        stype = type(sel).__name__
+        if stype == "Element":
+            if (sel.namespace is None and
+                sel.element is None):
+                return Or() # FALSE
+
+            if sel.namespace is not None:
+                return Or(self.nsvars[i] != self.nsvals[sel.namespace])
+            if sel.element is not None:
+                return Or(self.evars[i] != self.evals[sel.element])
+        elif stype == "Pseudo":
+            if sel.ident == "first-child":
+                return Or(self.psvars["root"][i],
+                          self.__not_nth(self.nchild[i], 0, 1))
+            elif sel.ident == "last-child":
+                return Or(self.psvars["root"][i],
+                          self.__not_nth(self.nlchild[i], 0, 1))
+            elif sel.ident == "only-child":
+                return Or(
+                    self.psvars["root"][i],
+                    self.__not_nth(self.nchild[i], 0, 1),
+                    self.__not_nth(self.nlchild[i], 0, 1)
+                )
+            elif sel.ident == "fist-of-type":
+                return Or(self.psvars["root"][i],
+                          self.__not_nth_of_type(0, 1, i))
+            elif sel.ident == "last-of-type":
+                return Or(self.psvars["root"][i],
+                          self.__not_nth_last_of_type(0, 1, i))
+            elif sel.ident == "only-of-type":
+                return Or(
+                    self.psvars["root"][i],
+                    self.__not_nth_of_type(0, 1, i),
+                    self.__not_nth_last_of_type(0, 1, i)
+                )
+            else:
+                return Not(self.psvars[sel.ident][i])
+        elif stype == "Function":
+            if sel.name == "nth-child":
+                a, b = cssfile.get_fun_sel_coefs(sel)
+                return Or(self.psvars["root"][i],
+                          self.__not_nth(self.nchild[i], a, b))
+            elif sel.name == "nth-last-child":
+                a, b = cssfile.get_fun_sel_coefs(sel)
+                return Or(self.psvars["root"][i],
+                          self.__not_nth(self.nlchild[i], a, b))
+            elif sel.name == "nth-of-type":
+                a, b = cssfile.get_fun_sel_coefs(sel)
+                return Or(self.psvars["root"][i],
+                          self.__not_nth_of_type(a, b, i))
+            elif sel.name == "nth-last-of-type":
+                a, b = cssfile.get_fun_sel_coefs(sel)
+                return Or(self.psvars["root"][i],
+                          self.__not_nth_last_of_type(a, b, i))
+            else:
+                raise AutEmptinessException("Unrecognised function selector " +
+                                            str(sel))
+    def __nth_of_type(self, a, b, i):
+        """Constructs a clause expressing the same as the selector of
+        the same name.  an + b for the ith position in the run.
+
+        :param a:
+            Integer multiple of n
+        :param b:
+            Integer offset
+        :param i:
+            Index in the run to construct the clause for
+        :returns:
+            Z3 encoding expressing the selector
+        """
+        return self.__of_type(a, b, i, self.ntchild, self.__nth)
+
+    def __not_nth_of_type(self, a, b, i):
+        """Constructs a clause expressing the same as the selector of
+        the same name, but negated.  Not an + b for the ith position in
+        the run.
+
+        :param a:
+            Integer multiple of n
+        :param b:
+            Integer offset
+        :param i:
+            Index in the run to construct the clause for
+        :returns:
+            Z3 encoding expressing the selector
+        """
+        return self.__of_type(a, b, i, self.ntchild, self.__not_nth)
+
+    def __nth_last_of_type(self, a, b, i):
+        """Constructs a clause expressing the same as the selector of
+        the same name.  an + b for the ith position in the run.
+
+        :param a:
+            Integer multiple of n
+        :param b:
+            Integer offset
+        :param i:
+            Index in the run to construct the clause for
+        :returns:
+            Z3 encoding expressing the selector
+        """
+        return self.__of_type(a, b, i, self.nltchild, self.__nth)
+
+    def __not_nth_last_of_type(self, a, b, i):
+        """Constructs a clause expressing the same as the selector of
+        the same name, but negated.  Not an + b for the ith position in
+        the run.
+
+        :param a:
+            Integer multiple of n
+        :param b:
+            Integer offset
+        :param i:
+            Index in the run to construct the clause for
+        :returns:
+            Z3 encoding expressing the negated selector
+        """
+        return self.__of_type(a, b, i, self.nltchild, self.__not_nth)
+
+
+    def __of_type(self, a, b, i, pos_vars, pos_fun):
+        """Constructs a clause expressing the node at position i in
+        the run is an + bth of type, according to pos_fun
+
+        :param a:
+            Integer multiple of n
+        :param b:
+            Integer offset
+        :param i:
+            Index in the run to construct the clause for
+        :param pos_vars:
+            either self.ntchild or self.nltchild
+        :param pos_fun:
+            self.__nth or self.__not_nth
+        :returns:
+            Z3 encoding expressing the selector
+        """
+        choices = []
+        for ns in self.nsvals:
+            for e in self.evals:
+                choices.append(
+                    And(
+                        self.nsvars[i] == self.nsvals[ns],
+                        self.evars[i] == self.evals[e],
+                        pos_fun(pos_vars[(ns, e)][i], a, b)
+                    )
+                )
+        return Or(choices)
+
+    def __tran_pres(self, t, i):
+        """Encodes the effect of transition t from position i to i+1 as a z3 formula,
+        only asserts that the arrow variable for the transition is true.  Constraints
+        enforcing how arrow a used at position i effects the position variable values
+        for i+1 have to be encoding externally.
+
+        :param t:
+            The Tran to encode
+        :param i:
+            The position in the run the transition leaves from
+        :returns:
+            A Z3 constraint expressing the effect of the transition
+        """
+        if i < 0 or i >= self.n:
+            raise AutEmptinessException("Position to __tran_pres too high (i = " +
+                                        i +
+                                        ")")
+        cons = []
+
+        # States
+        cons.append(self.qvars[i] == self.qvals[t.q1])
+        cons.append(self.qvars[i+1] == self.qvals[t.q2])
+
+        # Node selector satisfied
+        cons.append(self.__sel_pres(t.node_selector, i))
+
+        # Specific constraints to arrow type
+        cons.append(self.arrvars[i] == self.arrvals[t.arrow])
+
+        return And(cons)
+
+    def __arr_child_pres(self, i):
+        """Encodes the effect of child transition from position i to i+1 as a z3
+        formula.
+
+        :param i:
+            The position in the run the transition leaves from, must be < n - 1
+        :returns:
+            A Z3 constraint expressing the effect of the transition
+        """
+        cons = []
+
+        # Needs children
+        cons.append(Not(self.psvars["empty"][i]))
+        # Position info of next node
+        cons.append(self.__first_child_cons(i+1))
+
+        return And(cons)
+
+    def __arr_neighbour_pres(self, i):
+        """Encodes the effect of neighbour transition t from position i to i+1
+        as a z3 formula.
+
+        :param i:
+            The position in the run the transition leaves from, must be < n - 1
+        :returns:
+            A Z3 constraint expressing the effect of the transition
+        """
+        cons = [Not(self.psvars["root"][i])]
+
+        cons.append(self.nchild[i+1] == self.nchild[i] + 1)
+        if self.last:
+            cons.append(self.nlchild[i+1] == self.nlchild[i] - 1)
+
+        # Here we use last_of_type => of_type
+        if self.of_type:
+            for ns in self.nsvals:
+                for e in self.evals:
+                    n_ns_e = self.ntchild[(ns, e)][i]
+                    n_ns_e_p = self.ntchild[(ns, e)][i+1]
+                    if not self.last_of_type:
+                        cons.append(If(And(self.nsvars[i+1] == self.nsvals[ns],
+                                           self.evars[i+1] == self.evals[e]),
+                                       n_ns_e_p == n_ns_e + 1,
+                                       n_ns_e_p == n_ns_e))
+                    else:
+                        nl_ns_e = self.nltchild[(ns, e)][i]
+                        nl_ns_e_p = self.nltchild[(ns, e)][i+1]
+                        cons.append(If(And(self.nsvars[i+1] == self.nsvals[ns],
+                                           self.evars[i+1] == self.evals[e]),
+                                       And(n_ns_e_p == n_ns_e + 1,
+                                           nl_ns_e_p == nl_ns_e - 1),
+                                       And(n_ns_e_p == n_ns_e,
+                                           nl_ns_e_p == nl_ns_e)))
+
+        return And(cons)
+
+    def __arr_sibling_pres(self, i):
+        """Encodes the effect of a sibling transition from position i to i+1 as
+        a z3 formula.
+
+        :param i:
+            The position in the run the transition leaves from, must be < n - 1
+        :returns:
+            A Z3 constraint expressing the effect of the transition
+        """
+        cons = [Not(self.psvars["root"][i])]
+
+        if not self.last:
+            cons.append(Exists(
+                [self.__delta],
+                And(self.__delta >= 1,
+                    self.nchild[i+1] == self.nchild[i] + self.__delta)
+            ))
+        else:
+            cons.append(Exists(
+                [self.__delta],
+                And(self.__delta >= 1,
+                    self.nchild[i+1] == self.nchild[i] + self.__delta,
+                    self.nlchild[i+1] == self.nlchild[i] - self.__delta)
+            ))
+
+        # Here we use last_of_type => of_type
+        if self.of_type:
+            for ns in self.nsvals:
+                for e in self.evals:
+                    n_ns_e = self.ntchild[(ns, e)][i]
+                    n_ns_e_p = self.ntchild[(ns, e)][i+1]
+                    if not self.last_of_type:
+                        cons.append(Exists(
+                            [self.__delta],
+                            And(self.__delta >= 0,
+                                If(And(self.nsvars[i+1] == self.nsvals[ns],
+                                       self.evars[i+1] == self.evals[e]),
+                                   n_ns_e_p == n_ns_e + self.__delta + 1,
+                                   n_ns_e_p == n_ns_e + self.__delta))
+                        ))
+                    else:
+                        nl_ns_e = self.nltchild[(ns, e)][i]
+                        nl_ns_e_p = self.nltchild[(ns, e)][i+1]
+                        cons.append(Exists(
+                            [self.__delta],
+                            And(self.__delta >= 0,
+                                If(And(self.nsvars[i+1] == self.nsvals[ns],
+                                       self.evars[i+1] == self.evals[e]),
+                                   And(n_ns_e_p == n_ns_e + self.__delta + 1,
+                                       nl_ns_e_p == nl_ns_e - self.__delta - 1),
+                                   And(n_ns_e_p == n_ns_e + self.__delta,
+                                       nl_ns_e_p == nl_ns_e - self.__delta)))
+                        ))
+
+        return And(cons)
+
+    def __arr_noop_pres(self, i):
+        """Encodes the effect of noop transition from position i to i+1 as a z3
+        formula.
+
+        :param i:
+            The position in the run the transition leaves from, must be < n - 1
+        :returns:
+            A Z3 constraint expressing the effect of the transition
+        """
+        cons = []
+
+        cons.append(self.nchild[i+1] == self.nchild[i])
+        if self.last:
+            cons.append(self.nlchild[i+1] == self.nlchild[i])
+
+        # Here we use last_of_type => of_type
+        if self.of_type:
+            for ns in self.nsvals:
+                for e in self.evals:
+                    n_ns_e = self.ntchild[(ns, e)][i]
+                    n_ns_e_p = self.ntchild[(ns, e)][i+1]
+                    cons.append(n_ns_e_p == n_ns_e)
+                    if self.last_of_type:
+                        nl_ns_e = self.nltchild[(ns, e)][i]
+                        nl_ns_e_p = self.nltchild[(ns, e)][i+1]
+                        cons.append(nl_ns_e_p == nl_ns_e)
+
+        return And(cons)
+
+    def __first_child_cons(self, i):
+        """A constraint insisting that the ith position contains the first child.
+        That is, ni = 1, and the of-type variables match the type of the node.
+
+        :param i:
+            The position in the run (integer)
+        :returns:
+            A Z3 encoding that the ith position contains a first child.
+        """
+        cons = []
+
+        cons.append(self.nchild[i] == 1)
+        if self.of_type:
+            for ns in self.nsvals:
+                for e in self.evals:
+                    n_ns_e = self.ntchild[(ns, e)][i]
+                    cons.append(If(And(self.nsvars[i] == self.nsvals[ns],
+                                       self.evars[i] == self.evals[e]),
+                                   n_ns_e == 1,
+                                   n_ns_e == 0))
+        return And(cons)
+

@@ -56,10 +56,12 @@ def refactor(css, timebound = 60000):
     print "Building cliqueCSS..."
     (simple, clique) = simplecssbuilder.fromcssfile(css, make_clique_css = True)
 
-    from main import get_output_simple
+    from main import get_output_simple, get_dont_refactor
     if get_output_simple():
         print "Simple CSS:"
         print str(simple)
+    if get_dont_refactor():
+        return clique
 
     start_t = default_timer()
 

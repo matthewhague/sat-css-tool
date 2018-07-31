@@ -604,7 +604,8 @@ class TestEmptiness(unittest.TestCase):
             True iff the selector should be empty
         """
         aut = cssautomaton.fromstring(css)
-        self.assertEqual(autemptiness.isempty(aut), result)
+        self.assertEqual(autemptiness.isempty_optimised(aut), result)
+        self.assertEqual(autemptiness.isempty_unoptimised(aut), result)
 
     #TODO: write some tests and uncomment one below once implemented
 

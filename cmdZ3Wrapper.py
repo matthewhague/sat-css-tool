@@ -369,6 +369,9 @@ class Model(object):
         else:
             return self._lookup[name]
 
+    def __str__(self):
+        return str(self._lookup)
+
 def is_true(value):
     """
     :param value:
@@ -615,15 +618,14 @@ class _Z3Solver(object):
         if res == sat:
             # Read optimize result if soft constraints
             handle = self._frames[-1].get_handle()
+            # ignore (objectives
+            inpipe.readline()
             if handle is not None:
-                # ignore (objectives
-                inpipe.readline()
                 valline = inpipe.readline()
                 # remove ()s from value and convert to int
                 handle._set_value(int(valline.translate(None, '()')))
-                # read trailing )
-                inpipe.readline()
-
+            # read trailing )
+            inpipe.readline()
 
             # read (model
             inpipe.readline()
