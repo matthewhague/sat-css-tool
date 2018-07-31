@@ -61,8 +61,9 @@ class _PseudoOptimizer(object):
             TODO: extend as above.
         """
         var = self._make_var()
-        self._clauses.append(_z3.Implies(fmla, var == 0))
-        self._clauses.append(_z3.Implies(_z3.Not(fmla), var == weight))
+        self._clauses.append(_z3.Or(_z3.Not(fmla), var == 0))
+        # not fmla => var=weight
+        self._clauses.append(_z3.Or(fmla, var == weight))
         self._weight_vars.append(var)
         return None
 
@@ -128,8 +129,12 @@ def all_in_find_refactoring(clique, simple,
     optimizer.push()
 
     print "Building encoding..."
+    from main import get_no_bicliques
     start_t = default_timer()
-    encoder = _Z3EncoderBiclique(clique, simple, partition, num_partitions)
+    encoder = (_Z3EncoderBiclique(clique, simple, partition, num_partitions)
+               if not get_no_bicliques()
+               else _Z3EncoderSimple(clique, simple, partition, num_partitions))
+
     encoder.add_hard_constraints(optimizer)
     # TODO: find out how to make this work
     # optimizer.set('timeout',timebound)
@@ -777,4 +782,237 @@ class _Z3EncoderBiclique(object):
                 optimizer.add(_z3.Or(_z3.Not(self.__is_biclique((ss, pp))),
                                      _z3.Not(self.ex_p_vars[i])))
 
+class _Z3EncoderSimple(object):
+    """Encodes the problem of identifying a refactoring as a Z3 formula.
+       Uses one boolean var per selector or property that can be in the new rule.
+    """
+    def __init__(self, clique, simple, partition, num_partitions):
+        """
+        :param clique:
+            The cliqueCSS to optimise
+        :param simple:
+            A simpleCSS equivalent to the cliqueCSS
+        :param partition:
+            Search for refactorings in every positions that mod
+            num_partitions are = partition
+        :param num_partitions:
+            See above
+        """
+        self.clique = clique
+        self.simple = simple
+        self.partition = partition
+        self.num_partitions = num_partitions
+
+        # position to insert biclique
+        self.idx = CNFInt("idx", self.clique.num_rules() + 1, _z3)
+
+        # need to know last index of all edges to calculate savings and if edge
+        # order respected
+        self.last_index = clique.build_last_index_map()
+
+        self.sels = { r1.getSelector() for r1 in self.simple.getEdgeSet() }
+        self.props = { r1.getProperty() for r1 in self.simple.getEdgeSet() }
+
+        self.s_vars = { s : _z3.Bool(str(s)) for s in self.sels }
+        self.p_vars = { p : _z3.Bool(str(p)) for p in self.props }
+
+
+    def add_hard_constraints(self, optimizer):
+        """Add a formula putting required constraints on get_soft_constraints
+
+        :param optimizer:
+            A Z3 Optimizer to add hard constraints to
+        """
+        self.__add_index_in_bounds_fmla(optimizer)
+        self.__add_refactor_respects_order(optimizer)
+        if self.num_partitions > 1:
+            optimizer.add(self.idx.lsb_with(self.partition))
+
+    def add_soft_constraints(self, optimizer):
+        """Add formulas that needs to be maximised to find the best refactoring.
+           Relies on get_constraints() also being asserted
+
+        :param optimizer:
+            A Z3 Optimize to add soft constraints to
+        :return:
+            A handle to the soft constraints
+        """
+        return self.__add_count_size(optimizer)
+
+    def add_final_constraints(self, optimizer):
+        """Adds final constraints that should be asserted after all others have been added.
+
+        :param optimizer:
+            A Z3 Optimize to add the constraints to
+        """
+        for c in self.idx.get_variable_constraints():
+            optimizer.add(c)
+
+    def _get_index(self, model):
+        """
+        :param model:
+            A Z3 model of the constructed formula
+        :returns:
+            The index of the refactoring as Integer
+        """
+        return self.idx.get_value(model)
+
+    def _get_size(self, handle):
+        """
+        :param handle:
+            The Z3 optimisation handle associated to the formula or None
+        :returns:
+            The size of the CSS after the refactoring associated to handle
+            or -1 if handle is None
+        """
+        if handle is None:
+            return -1
+        else:
+            # TODO: this properly
+            return int(str(handle.value()))
+
+    def __add_index_in_bounds_fmla(self, optimizer):
+        """Adds formula asserting that the biclique is put into a sensible position
+        in the file
+
+        :param optimizer:
+            A Z3 Optimize to add constraints to
+        """
+        optimizer.add(self.idx >= 0)
+        optimizer.add(self.idx <= self.clique.num_rules() + 1)
+
+
+    def __add_count_size(self, optimizer):
+        """Adds soft constraints calculating size of file after refactoring and trimming
+
+        :param optimizer:
+            A Z3 Optimize to add soft constraints to
+        :returns:
+            A Z3 handle to the soft constraints if created, else None
+        """
+        h = None
+        for i in xrange(self.clique.num_rules()):
+            h = self.__add_clique_count_size(i, optimizer)
+
+        h2 = self._add_clique_size(optimizer)
+
+        if h2 is not None:
+            return h2
+        else:
+            return h
+
+
+    def __add_clique_count_size(self, i, optimizer):
+        """Adds soft constraint counting the size of each clique i after the
+        refactoring.  Not quite accurate since we don't detect savings from
+        emptied bicliques.
+
+        :param i:
+            An index in range(num rules in clique)
+        :param optimizer:
+            A Z3 Optimize to add soft_constraints to
+        :returns:
+            A Z3 handle to the soft_constraints, else None if none created
+        """
+        h = None
+        (ss, pp) = self.clique.cliques[i]
+
+        # now subtract any nodes we can remove
+        for s in ss:
+            # can remove if all incident edges appearing here last appear later
+            # or in new bucket (if new bucket appears later)
+            can_remove = _z3.And([ self._has_edge(s, p)
+                                   for p in pp
+                                   if self.last_index[simpleRule(s, p)] == i ])
+            # if edge appears after bucket, or can't remove, cost is len(s) + 1
+            # for trailing ,
+            h = optimizer.add_soft(_z3.And(i < self.idx, can_remove), len(s) + 1)
+
+        for p in pp:
+            can_remove = _z3.And([ self._has_edge(s, p)
+                                   for s in ss
+                                   if self.last_index[simpleRule(s, p)] == i ])
+            h = optimizer.add_soft(_z3.And(i < self.idx, can_remove), len(p) + 1)
+
+        return h
+
+    def __add_refactor_respects_order(self, optimizer):
+        """Adds a formula asserting that the refactoring does not violate the
+        edge ordering.
+
+        :param optimizer:
+            A Z3 Optimize to add constraints to
+        """
+        # Find out last index of each edge
+        # Assert for each (e1, e2) with e1 in bucket, that last e2 > i
+        for (e1, e2) in self.simple.edgeOrder:
+            optimizer.add(_z3.Or(_z3.Not(self.__has_edge_e(e1)),
+                                  self.idx < self.last_index[e2]))
+
+    def __has_edge_e(self, e):
+        """
+        :param e:
+            A simplerule
+        :returns:
+            Formula asserting e appears in inserted biclique
+        """
+        return self._has_edge(e.getSelector(),
+                              e.getProperty())
+
+    def get_refactoring(self, model, handle):
+        """Returns the refactoring corresponding to the model found by Z3
+
+        :param model:
+            The model returned by Z3 .model()
+        :param handle:
+            A Z3 handle to the soft constraints or None if not available (in
+            which case the returned refactoring will not estimate size of
+            refactored file)
+        """
+
+        ss_res = set()
+        pp_res = []
+
+        for (s, v) in self.s_vars.iteritems():
+            if _z3.is_true(model[v]):
+                ss_res.add(s)
+
+        for (p, v) in self.p_vars.iteritems():
+            if _z3.is_true(model[v]):
+                pp_res.append(p)
+
+        idx = self._get_index(model)
+        size = self._get_size(handle)
+
+        return Refactoring([(idx, ss_res, pp_res)], size)
+
+    def _add_clique_size(self, optimizer):
+        """Adds soft constraints to count weight of new clique
+
+        :param optimizer:
+            The Z3 Optimize to add soft constraints to
+        :returns:
+            A Z3 handle to the soft constraints if any added, else None
+        """
+        # There is also a cost of 2 for { and }
+        # But a saving of two since the +1 is for separating , and ; overcounts
+        # by 2 (since only needed as separators)
+        h = None
+        for (s, v) in self.s_vars.iteritems():
+            h = optimizer.add_soft(_z3.Not(v), len(s) + 1)
+        for (p, v) in self.p_vars.iteritems():
+            h = optimizer.add_soft(_z3.Not(v), len(p) + 1)
+        return h
+
+
+    def _has_edge(self, s, p):
+        """
+        :param s"
+            A selector from a simpleRule
+        :param p:
+            A property from a simpleRule
+        :returns:
+            A z3 formula asserting (s, p) appears in inserted biclique
+        """
+        return _z3.And([self.s_vars[s], self.p_vars[p]])
 

@@ -145,6 +145,7 @@ class CNFInt:
         self._gtmemo = dict()
         self._eqmemo = dict()
         self._bitseqmemo = dict()
+        self._lsbwithmemo = dict()
 
         self._true = self._z3.Bool(CNFINT_TRUEFALSE_VAR)
         self._false = self._z3.Not(self._true)
@@ -176,6 +177,37 @@ class CNFInt:
     def is_even(self):
         """:returns: Formula asserting val is even, of literal form Not(x)"""
         return self._z3.Not(self._bvars[0])
+
+    def lsb_with(self, x):
+        """
+        :param x:
+            An integer
+        :return:
+            a formula asserting that the bit sequence lsb first starts
+            with bit encoding of x
+        """
+        def do_lsb_with():
+            xbits = self.__int_to_bitvec(x)
+            l = self.__get_fresh_var()
+
+            # l => bit[0..i] = xbits
+            for j in xrange(len(xbits)):
+                if xbits[j] == '0':
+                    self.__add_constraint(self._z3.Or(self._z3.Not(l),
+                                                      self._z3.Not(self._bvars[j])))
+                else: # '1'
+                    self.__add_constraint(self._z3.Or(self._z3.Not(l),
+                                                      self._bvars[j]))
+
+            return l
+
+        if self.__in_memo(self._lsbwithmemo, x):
+            return self.__get_from_memo(self._lsbwithmemo, x)
+        else:
+            fmla = do_lsb_with()
+            self.__add_to_memo(self._lsbwithmemo, x, fmla)
+            return fmla
+
 
     def add_variable_contraints(self, optimizer):
         """ Adds a list of Or() clauses that need to be true for the
