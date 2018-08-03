@@ -191,44 +191,48 @@ def fromcssfile(css, make_clique_css = False):
     reset_selectors_overlap_memo()
     order = set()
 
-    for p in css.get_props():
-        for spec in css.get_specificities(p):
-            for ((p1, s1, v1), (p2, s2, v2)) in _iter_related_comb(p, spec, css):
-                # p1 != p2 if e.g. p = p2 is font and p1 is font-weight
-                if p1 != p2 or v1 != v2:
-                    e1 = rules[(p1, s1, v1)]
-                    e2 = rules[(p2, s2, v2)]
+    # get ordering
+    from main import get_no_ordering
+    if not get_no_ordering():
+        for p in css.get_props():
+            for spec in css.get_specificities(p):
+                for ((p1, s1, v1),
+                     (p2, s2, v2)) in _iter_related_comb(p, spec, css):
+                    # p1 != p2 if e.g. p = p2 is font and p1 is font-weight
+                    if p1 != p2 or v1 != v2:
+                        e1 = rules[(p1, s1, v1)]
+                        e2 = rules[(p2, s2, v2)]
 
-                    # first check that a potential edge order wouldn't
-                    # be mitigated by a later rule.  I.e.,
-                    #    (s1,p1,v1) < (s2,p1,v2)
-                    # would be pointless if (s2,p1,v1) appears later in
-                    # the file -- if v1 is not a valid value, s2 would
-                    # fall back to v2 regardless of s1's value (v1 would
-                    # also fail there).  If v1 is valid, then s2 would
-                    # already assign it and v2 would be ignored, so we
-                    # can safely put (s1,p1,v1) after (s2,p1,v2)
+                        # first check that a potential edge order wouldn't
+                        # be mitigated by a later rule.  I.e.,
+                        #    (s1,p1,v1) < (s2,p1,v2)
+                        # would be pointless if (s2,p1,v1) appears later in
+                        # the file -- if v1 is not a valid value, s2 would
+                        # fall back to v2 regardless of s1's value (v1 would
+                        # also fail there).  If v1 is valid, then s2 would
+                        # already assign it and v2 would be ignored, so we
+                        # can safely put (s1,p1,v1) after (s2,p1,v2)
 
-                    (l1, _) = css.get_info(p1, spec, s1, v1)
-                    (l2, _) = css.get_info(p2, spec, s2, v2)
+                        (l1, _) = css.get_info(p1, spec, s1, v1)
+                        (l2, _) = css.get_info(p2, spec, s2, v2)
 
-                    if full_selectors_overlap(s1, s2):
-                        if l2 < l1:
-                            killer_info = css.get_info(p2, spec, s1, v2)
-                            killed = False
-                            if killer_info is not None:
-                                (l3, _) = killer_info
-                                killed = l3 > l1
-                            if not killed:
-                                order.add((e2, e1))
-                        else:
-                            killer_info = css.get_info(p1, spec, s2, v1)
-                            killed = False
-                            if killer_info is not None:
-                                (l3, _) = killer_info
-                                killed = l3 > l2
-                            if not killed:
-                                order.add((e1, e2))
+                        if full_selectors_overlap(s1, s2):
+                            if l2 < l1:
+                                killer_info = css.get_info(p2, spec, s1, v2)
+                                killed = False
+                                if killer_info is not None:
+                                    (l3, _) = killer_info
+                                    killed = l3 > l1
+                                if not killed:
+                                    order.add((e2, e1))
+                            else:
+                                killer_info = css.get_info(p1, spec, s2, v1)
+                                killed = False
+                                if killer_info is not None:
+                                    (l3, _) = killer_info
+                                    killed = l3 > l2
+                                if not killed:
+                                    order.add((e1, e2))
 
     complex_rules = [ _make_rule(r) for r in css.get_rules() ]
     simple_css = simpleCSS(list(rules.values()),

@@ -1,7 +1,7 @@
 """Sat-CSS: minimise CSS files by searching for space-saving refactorings.  Can also run in emptiness mode to check intersection of pairs of CSS selectors.
 
 Usage:
-  main.py [-efops] [<file>] [<num_rules>] [--split=<num_rules>] [--file=<output_file>] [--refactor=<technique>] [--anneal=<anneal_type>] [--num-threads=<num>] [--num-parts=<num>] [--intermediate-results=<dir>] [--dimacs-output] [--enumeration-output] [--dont-refactor] [--output-simple] [--write-compact] [--compact-only] [--unopt-emp] [--unlim-bicliques] [--no-bicliques]
+  main.py [-efops] [<file>] [<num_rules>] [--split=<num_rules>] [--file=<output_file>] [--refactor=<technique>] [--anneal=<anneal_type>] [--num-threads=<num>] [--num-parts=<num>] [--intermediate-results=<dir>] [--dimacs-output] [--enumeration-output] [--dont-refactor] [--output-simple] [--write-compact] [--compact-only] [--unopt-emp] [--unlim-bicliques] [--no-bicliques] [--no-ordering]
   main.py (-h | --help)
   main.py --version
 
@@ -22,6 +22,7 @@ Options:
   --intermediate-results <dir> Directory to save the css file after each refactoring in --deduct-refactor mode.  Creates directory if doesn't exist.  If not specified, then no results saved.
   --output-simple              Output simpleCSS model of css file
   --no-bicliques               Pose refactoring problem as simple MaxSAT with one variable per selector/property and without biclique optimisation
+  --no-ordering                Do not compute an edge ordering (i.e. refactor without respecting edge order)
   --num-threads=<num>          Add this to specify multiple threads for deduct refactoring search (will try to guess a good number if not supplied)
   --num-parts=<num>            When set to n, each thread will search 1/n of the search space per iteration (covering the whole search space in n iterations) -- a higher number means a faster search, but possibly the best refactoring will not be found (will try to guess a good number if not supplied))
   --unopt-emp                  Use unoptimised emptiness check that does a single large Presburger check
@@ -154,6 +155,14 @@ def get_no_bicliques():
     try:
         arguments = docopt(__doc__, version='v0.1')
         return arguments['--no-bicliques']
+    except DocoptExit:
+        return False
+
+def get_no_ordering():
+    """:returns: whether --no-bicliques was specified on the command line"""
+    try:
+        arguments = docopt(__doc__, version='v0.1')
+        return arguments['--no-ordering']
     except DocoptExit:
         return False
 
