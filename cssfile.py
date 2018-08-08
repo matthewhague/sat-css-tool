@@ -330,6 +330,11 @@ class CSSFile:
         :raises:
             IOError if file cannot be read
         """
+
+        if len(stylesheet.errors) > 0:
+            print "WARNING: loading style sheet with parse errors"
+            print '\n'.join(map(str, stylesheet.errors))
+
         self.stylesheet = stylesheet
         if first_rule_idx is None:
             self.first_rule_idx = 0
