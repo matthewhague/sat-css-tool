@@ -243,7 +243,9 @@ def fromcssfile(css, make_clique_css = False):
     clique_css = None
     if make_clique_css:
         rule_pairs = [ _make_rule_pair(r) for r in css.get_rules() ]
-        clique_css = cliqueCSS(rule_pairs, prop_names)
+        clique_css = cliqueCSS(rule_pairs,
+                               prop_names,
+                               ignored_rules = css.get_ignored_rules())
 
     if not make_clique_css:
         return simple_css
