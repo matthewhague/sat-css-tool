@@ -74,7 +74,7 @@ SHORTHAND_REL = { "background": ["background-image",
 
 class cliqueCSS:
 
-    def __init__(self, cliques = None, prop_names = dict()):
+    def __init__(self, cliques = None, prop_names = dict(), ignored_rules = []):
         """
         :param cliques:
             A list of pairs (ss, ps) where ss is a set of selectors in the same format as simpleRule
@@ -82,6 +82,10 @@ class cliqueCSS:
         :param prop_names:
             a map from properties (of the form "p: v" to the name of the
             property defined (p)
+        :param ignored_rules:
+            A list of string representations of rules that are note sel
+            { decl } rules.  E.g. @font-face.  These will be output with
+            string representations, but otherwise not handled.
         """
         if cliques == None:
             self.cliques = []
@@ -89,6 +93,7 @@ class cliqueCSS:
             self.cliques = list(cliques)
 
         self.prop_names = prop_names
+        self.ignored_rules = ignored_rules
 
     def remove_rule(self, i):
         """
@@ -416,9 +421,12 @@ class cliqueCSS:
 
     def write_compact(self, fout):
         """Writes the represented CSS file in minimal form to fout.
+        Includes ignored_rules.
         :param fout:
             Something with a .write() method, the file to write to
         """
+        for ignored in self.ignored_rules:
+            fout.write(ignored)
         self.sort_decls()
         for (pos, (ss, pp)) in enumerate(self.cliques):
             fout.write(','.join(sorted(ss)))
@@ -709,7 +717,7 @@ class cliqueCSS:
         return True
 
     def __str__(self):
-        bits = ["\n"]
+        bits = ["\n".join(self.ignored_rules), "\n"]
         counter = 0
         for (ss, pp) in self.cliques:
             bits.append("/* Rule number " + str(counter) + " */\n")

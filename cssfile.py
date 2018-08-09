@@ -5,7 +5,7 @@ from collections import defaultdict
 from itertools import islice
 from math import ceil
 
-import tinycss
+import tinycss2
 import cssselect_parser
 
 # Let's assume this will never appear in any CSS file...
@@ -31,9 +31,9 @@ class FakeValue:
 class FakeDeclaration:
     def __init__(self, name, priority, value):
         self.name = name
+        self.lower_name = name.lower()
         self.priority = priority
         self.value = FakeValue(value)
-
 
 def fromfile(filename, multiprop = False):
     """Function for parsing the CSS file
@@ -45,8 +45,11 @@ def fromfile(filename, multiprop = False):
     :returns:
         a CSSFile representation of the CSS file
     """
-    parser = tinycss.make_parser('page3')
-    return CSSFile(parser.parse_stylesheet_file(filename), multiprop)
+    bytes = open(filename).read()
+    stylesheet, enc = tinycss2.parse_stylesheet_bytes(bytes,
+                                                      skip_whitespace=True,
+                                                      skip_comments=True)
+    return CSSFile(stylesheet, multiprop)
 
 def fromstring(css, multiprop = False):
     """Function for parsing the CSS
@@ -58,8 +61,10 @@ def fromstring(css, multiprop = False):
     :returns:
         a CSSFile representation of the CSS
     """
-    parser = tinycss.make_parser('page3')
-    return CSSFile(parser.parse_stylesheet(css))
+    stylesheet, enc = tinycss2.parse_stylesheet(css,
+                                                skip_whitespace=True,
+                                                skip_comments=True)
+    return CSSFile(stylesheet)
 
 def selector_str(sel):
     """
@@ -318,7 +323,7 @@ class CSSFile:
         """Create a CSSFile object
 
         :param stylesheet:
-            A stylesheet parsed by tinycss
+            A stylesheet parsed by tinycss2
         :param multiprops:
             Combines multiply defined properties in one rule into a single declaration with multiple values
             E.g. { p: a; p: b } becomes a single { p : a+b } rather than two declarations
@@ -331,9 +336,10 @@ class CSSFile:
             IOError if file cannot be read
         """
         self.stylesheet = stylesheet
+        self.ignored_rules = [] # populated by self.__build_data_structures
         if first_rule_idx is None:
             self.first_rule_idx = 0
-            self.last_rule_idx = len(stylesheet.rules)
+            self.last_rule_idx = len(stylesheet)
         else:
             self.first_rule_idx = first_rule_idx
             self.last_rule_idx = last_rule_idx
@@ -403,21 +409,20 @@ class CSSFile:
 
     def num_rules(self):
         """:returns: The number of rules in the CSS file."""
-        return len(self.stylesheet.rules)
+        return len(self.rules)
 
     def num_properties(self):
         """:returns: the number of distinct property tags (e.g. width,
         font-face) in the file"""
-        props = set([])
-        for rule in self.stylesheet.rules:
-            for decl in rule.declarations:
-                props.add(decl.name)
-
-        return len(props)
+        return len(self.props)
 
     def get_rules(self):
         """:returns: set of CSSRules"""
         return self.rules
+
+    def get_ignored_rules(self):
+        """:returns: a list of strings of rules that are not supported, e.g. @font-face"""
+        return self.ignored_rules
 
     def split_css(self, size):
         """
@@ -426,7 +431,7 @@ class CSSFile:
         :returns:
             A list of CSSFile objects, each containing a contiguous chunk of self
         """
-        num_chunks = int(ceil(len(self.stylesheet.rules) / float(size)))
+        num_chunks = int(ceil(len(self.stylesheet) / float(size)))
         return [ CSSFile(self.stylesheet,
                          self.multiprop,
                          size * i,
@@ -437,22 +442,8 @@ class CSSFile:
 
     def __str__(self):
         s = []
-        for rule in self.stylesheet.rules:
-            s.append(rule.selector.as_css())
-            s.append("[")
-            sels = []
-            for sel in self.__parse_selector(rule.selector):
-                sels.append(self.__selector_str(sel))
-            s.append(', '.join(sels))
-            s.append("]")
-            s.append(" {\n")
-            for decl in rule.declarations:
-                s.append("  ")
-                s.append(decl.name)
-                s.append(": ")
-                s.append(decl.value.as_css())
-                s.append("\n")
-            s.append("}")
+        for rule in self.stylesheet:
+            s.append(tinycss2.serialize(rule))
         return ''.join(s)
 
     def __parse_selector(self, selector):
@@ -460,12 +451,12 @@ class CSSFile:
         representation to a cssselect object representation
 
         :param selector:
-            The selector as a TokenList from tinycss
+            The selector as a component value list from tinycss
         :returns:
             A list of Selector objects from cssselect
             representing the selector (which may have had ,s)
         """
-        return cssselect_parser.parse(selector.as_css())
+        return cssselect_parser.parse(tinycss2.serialize(selector))
 
     def __selector_str(self, selector):
         """Turns a cssselect selector into a string -- main just a function
@@ -504,36 +495,52 @@ class CSSFile:
         def get_decl_value(decl):
             """Returns decl.value normalised and with !important
             appended if needed"""
-            val = decl.value.as_css()
+            val = tinycss2.serialize(decl.value)
             normed = self.__normalise_css_value(val)
-            important = "!important" if decl.priority is not None else ""
+            important = "!important" if decl.important else ""
             return normed + important
 
 
         props = defaultdict(lambda : defaultdict(dict))
         rules = list()
         line_no = 1
-        for rule in islice(self.stylesheet.rules,
+        for rule in islice(self.stylesheet,
                            self.first_rule_idx,
                            self.last_rule_idx):
             sels = set()
             declarations = None
 
-            if isinstance(rule, tinycss.css21.ImportRule):
-                print "WARNING: Import rule ignored!"
+            if rule.type != "qualified-rule":
+                rule_str = tinycss2.serialize([rule])
+                self.ignored_rules.append(rule_str)
+                print "WARNING: merely copying rule ", rule_str
                 continue
 
+            parsed_rule_decls = tinycss2.parse_declaration_list(rule.content,
+                                                                skip_whitespace=True,
+                                                                skip_comments=True)
+            rule_declarations = []
+
+            for i, decl in enumerate(parsed_rule_decls):
+                if decl.type == "error":
+                    print "WARNING: parser error in", i+1, "th declaration of"
+                    print tinycss2.serialize(rule.content)
+                    print decl.message
+                    print "Ignoring declaration"
+                    continue
+                rule_declarations.append(decl)
+
             if not multiprop:
-                declarations = rule.declarations
+                declarations = rule_declarations
             else:
                 declarations = []
 
                 # keep !important and not important separate, to be on the safe
                 # side
                 combined = defaultdict(list)
-                for decl in rule.declarations:
-                    val = self.__normalise_css_value(decl.value.as_css())
-                    combined[(decl.name, decl.priority)].append(val)
+                for decl in rule_declarations:
+                    val = self.__normalise_css_value(tinycss2.serialize(decl.value))
+                    combined[(decl.lower_name, decl.important)].append(val)
 
                 def build_val(vals):
                     return multiprop_separator.join(vals)
@@ -542,20 +549,20 @@ class CSSFile:
                     decl = FakeDeclaration(name, priority, build_val(vals))
                     declarations.append(decl)
 
-            decls = [ (decl.name, get_decl_value(decl))
-                      for decl in rule.declarations ]
+            decls = [ (decl.lower_name, get_decl_value(decl))
+                      for decl in rule_declarations ]
 
             # reset line number to beginning of rule after each selector
             line_no_start = line_no
-            for sel in self.__parse_selector(rule.selector):
+            for sel in self.__parse_selector(rule.prelude):
                 sels.add(sel)
                 line_no = line_no_start
                 for decl in declarations:
                     v = get_decl_value(decl)
-                    specificity = (decl.priority is not None,
+                    specificity = (decl.important,
                                    sel.parsed_tree.specificity())
                     tup = (sel, v)
-                    m = props[decl.name][specificity]
+                    m = props[decl.lower_name][specificity]
                     m[tup] = (line_no, not tup in m)
                     line_no += 1
 
@@ -573,7 +580,7 @@ class CSSFile:
         :returns:
             A normalisation of that value
         """
-        return _str_unicode(value)
+        return _str_unicode(value).strip()
 
 
 
