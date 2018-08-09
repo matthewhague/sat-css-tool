@@ -177,6 +177,7 @@ def fromcssfile(css, make_clique_css = False):
     # dict from (prop, selector, value) to simpleRule
     rules = {}
     prop_names = dict()
+    start_time = default_timer()
 
     for p in css.get_props():
         for spec in css.get_specificities(p):
@@ -240,6 +241,9 @@ def fromcssfile(css, make_clique_css = False):
     if make_clique_css:
         rule_pairs = [ _make_rule_pair(r) for r in css.get_rules() ]
         clique_css = cliqueCSS(rule_pairs, prop_names)
+
+    end_time = default_timer()
+    print "Constructing CSS Representations took", (end_time - start_time), "s"
 
     if not make_clique_css:
         return simple_css
