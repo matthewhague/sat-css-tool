@@ -22,9 +22,11 @@ idatt = "id"
 
 _locally_checkable_ps = set(["link", "visited", "hover",
                              "active", "focus", "enabled",
-                             "disabled", "checked"])
+                             "disabled", "checked",
+                             "valid", "invalid"])
 _local_conflict_ps = frozenset([("link", "visited"),
-                                ("enabled", "disabled")])
+                                ("enabled", "disabled"),
+                                ("valid", "invalid")])
 
 _global_ps = ["target", "root", "empty"]
 
@@ -33,6 +35,13 @@ _of_type_cons = set(["nth-of-type",
                      "first-of-type",
                      "only-of-type",
                      "last-of-type"])
+
+_known_ps = (_locally_checkable_ps |
+             _local_conflict_ps |
+             set(_global_ps) |
+             _of_type_cons |
+             set(["first-child", "last-child", "only-child"]))
+
 _emp_z3 = Solver()
 
 class HashableZ3:
@@ -333,6 +342,9 @@ def _normalise_pseudo_selectors(sel):
     def do_simple_sel(s, neg):
         stype = type(s).__name__
         if stype == "Pseudo" and s.ident in _locally_checkable_ps:
+            return s.ident
+        if stype == "Pseudo" and s.ident not in _known_ps:
+            print "WARNING: unrecognised pseudo class '", s.ident, "' in '", cssfile.selector_str_pt(sel), "' treating as simple boolean"
             return s.ident
         return None
 
