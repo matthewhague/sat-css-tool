@@ -67,9 +67,7 @@ def satisfiable(pos_cons, neg_cons):
 
         # Catch reveal.css constraints
         # a exists (by any operator) and :not(a)
-        if (len(posmap) > 0 and
-            len(negmap) == 1 and
-            next(iter(negmap)) == "exists"):
+        if (len(posmap) > 0 and "exists" in negmap):
             return False
 
         # Catch a test case constraint
@@ -90,6 +88,21 @@ def satisfiable(pos_cons, neg_cons):
             len(posmap["="]) == 0):
             return True
 
+        # Only positive equals (can't take two diff vals)
+        if (len(negmap) == 0 and
+            len(posmap) == 1 and "=" in posmap):
+            return len(posmap["="]) <= 1
+
+        # Only negative equals
+        if (len(posmap) == 0 and
+            len(negmap) == 1 and "=" in negmap):
+            return True
+
+        # Catch only equality constraints in neg and pos, and no overlap
+        if (len(posmap) == 1 and "=" in posmap and
+            len(negmap) == 1 and "=" in negmap):
+            return (len(posmap["="]) <= 1 and
+                    posmap["="].isdisjoint(negmap["="]))
 
         print "WARNING: String Constraints Unknown, assuming True!"
         print "Pos cons: ", pos_cons
