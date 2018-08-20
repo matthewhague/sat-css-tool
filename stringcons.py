@@ -26,6 +26,11 @@ def satisfiable(pos_cons, neg_cons):
         A String if there is a unique solution.
     """
 
+    # if pos_cons contains more than one element, remove "exists"
+    # since the attribute having a value implies it exists
+    if len(pos_cons) > 1:
+        pos_cons.discard(("exists", None))
+
     if len(pos_cons) + len(neg_cons) > 1:
 
         # pos/negmap[op] = set of values v such that [a op v]
