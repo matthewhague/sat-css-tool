@@ -19,6 +19,7 @@ import stringcons
 specialns = ""
 classatt = "class"
 idatt = "id"
+langatt = "lang"
 
 _locally_checkable_ps = set(["link", "visited", "hover",
                              "active", "focus", "enabled",
@@ -147,7 +148,11 @@ def _normalise_selector(sel):
     noids = _normalise_ids(nocls)
     if noids is None:
         return None
-    noatts = _normalise_atts(noids)
+    normlang = noids
+    normlang = _normalise_lang(noids)
+    if normlang is None:
+        return None
+    noatts = _normalise_atts(normlang)
     if noatts is None:
         return None
     return _normalise_pseudo_selectors(noatts)
@@ -271,6 +276,28 @@ def _normalise_ids(sel):
         (s, v) = norm
         return s if v is None else Hash(s, v)
 
+def _normalise_lang(sel):
+    """Normalises the lang constraints from the selector.  Similar to
+    _normalise_classes.
+
+    :param sel:
+        The selector as Selector.parsed_tree from cssselect
+    :returns:
+        The normalised selector, or None if its inconsistent.
+    """
+    def do_simple_sel(s, neg):
+        stype = type(s).__name__
+        if stype == "Function" and s.name == "lang":
+            if len(s.arguments) < 1:
+                raise AutEmptinessException("Invalid lang function has no arguments")
+            return ("|=", s.arguments[0].value)
+        elif stype == "Attrib":
+            if ((s.namespace == specialns or (s.namespace is None and neg)) and
+                 s.attrib == langatt):
+                return (s.operator, s.value)
+        return None
+    norm = _normalise_special(sel, do_simple_sel)
+    return norm[0] if norm is not None else None
 
 def _normalise_atts(sel):
     """Removes the attribute constraints from the selector as per _normalise_selector.
@@ -942,6 +969,9 @@ class AutEmptinessChecker:
                             (pvs, new_cons) = self.__create_new_pvs()
                             pos_cons |= new_cons
                         pos_cons.add(HashableZ3(self.__not_nth_last_of_type(pvs, a, b)))
+                    else:
+                        raise AutEmptinessException("Unrecognised function selector " +
+                                                    str(sel))
             elif stype == "Pseudo":
                 if s.ident == "first-child":
                     if pvs is None:
@@ -1004,6 +1034,9 @@ class AutEmptinessChecker:
                         (pvs, new_cons) = self.__create_new_pvs()
                         pos_cons |= new_cons
                     pos_cons.add(HashableZ3(self.__nth_last_of_type(pvs, a, b)))
+                else:
+                    raise AutEmptinessException("Unrecognised function selector " +
+                                                str(sel))
             s = s.selector
 
         sat = (not ((s.namespace, s.element) in neg_nsele or

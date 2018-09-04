@@ -2,7 +2,7 @@
 """Functions for analysing the satisfiability of string constraints"""
 
 from collections import defaultdict
-from itertools import ifilter
+from itertools import ifilter, combinations
 
 def satisfiable(pos_cons, neg_cons):
     """A function for analysing constraints of the form e.g.
@@ -35,12 +35,26 @@ def satisfiable(pos_cons, neg_cons):
 
         # pos/negmap[op] = set of values v such that [a op v]
 
-        posmap = defaultdict(set)
+        posmap = dict()
         for (op, v) in pos_cons:
+            if op not in posmap:
+                posmap[op] = set()
             posmap[op].add(v)
-        negmap = defaultdict(set)
+        negmap = dict()
         for (op, v) in neg_cons:
+            if op not in negmap:
+                negmap[op] = set()
             negmap[op].add(v)
+
+        def getpos(op):
+            if op in posmap:
+                return posmap[op]
+            return set()
+
+        def getneg(op):
+            if op in negmap:
+                return negmap[op]
+            return set()
 
         # Catch basic case of lots of ~= from class constraints
         # Satisfiable as long as we don't have a ~= x and :not(a ~= x)
@@ -48,13 +62,13 @@ def satisfiable(pos_cons, neg_cons):
              (len(negmap) == 1 and next(iter(negmap)) == "~=")) and
             (len(posmap) == 0 or
              (len(posmap) == 1 and next(iter(posmap)) == "~="))):
-            return not any(v in posmap["~="] for v in negmap["~="])
+            return not any(v in getpos("~=") for v in getneg("~="))
 
         # Catch igloo case of two equality constraints
         # a = x & a = y   with x != y
         if (len(posmap) == 1 and
             next(iter(posmap)) == "=" and
-            len(posmap["="]) > 1):
+            len(getpos("=")) > 1):
             return False
 
         # Catch reveal.css constraints
@@ -63,7 +77,7 @@ def satisfiable(pos_cons, neg_cons):
             next(iter(posmap)) == "=" and
             len(negmap) == 1 and
             next(iter(negmap)) == "="):
-            return not any(v in posmap["="] for v in negmap["="])
+            return not any(v in getpos("=") for v in getneg("="))
 
         # Catch reveal.css constraints
         # a exists (by any operator) and :not(a)
@@ -74,24 +88,24 @@ def satisfiable(pos_cons, neg_cons):
         # a *= b and :not(a = d)
         if (len(posmap) == 1 and
             next(iter(posmap)) == "*=" and
-            len(posmap["*="]) == 1 and
+            len(getpos("*=")) == 1 and
             len(negmap) == 1 and
             next(iter(negmap)) == "=" and
-            len(negmap["="]) == 1):
+            len(getneg("=")) == 1):
             return True
 
         # Catch only positive substring guards (*= or ~=) and at most one ^= and $=
         if (len(negmap) == 0 and
-            len(posmap["^="]) <= 1 and
-            len(posmap["$="]) <= 1 and
-            len(posmap["|="]) == 0 and
-            len(posmap["="]) == 0):
+            len(getpos("^=")) <= 1 and
+            len(getpos("$=")) <= 1 and
+            len(getpos("|=")) == 0 and
+            len(getpos("=")) == 0):
             return True
 
         # Only positive equals (can't take two diff vals)
         if (len(negmap) == 0 and
             len(posmap) == 1 and "=" in posmap):
-            return len(posmap["="]) <= 1
+            return len(getpos("=")) <= 1
 
         # Only negative equals
         if (len(posmap) == 0 and
@@ -101,12 +115,24 @@ def satisfiable(pos_cons, neg_cons):
         # Catch only equality constraints in neg and pos, and no overlap
         if (len(posmap) == 1 and "=" in posmap and
             len(negmap) == 1 and "=" in negmap):
-            return (len(posmap["="]) <= 1 and
-                    posmap["="].isdisjoint(negmap["="]))
+            return (len(getpos("=")) <= 1 and
+                    getpos("=").isdisjoint(getneg("=")))
+
+        # Conflicting lang requirements
+        if (len(posmap) == 1 and "|=" in posmap and
+            len(negmap) == 0):
+            for l1, l2 in combinations(getpos("|="), 2):
+                if not (unicode.startswith(l1, l2 + "-") or
+                        unicode.startswith(l2, l1 + "-")):
+                    return False
+            return True
 
         print "WARNING: String Constraints Unknown, assuming True!"
         print "Pos cons: ", pos_cons
         print "Neg cons: ", neg_cons
+        print "Pos map len", len(posmap)
+        print "has |=", "|=" in posmap
+        print "Pos map", posmap
 
     return True # TODO
 
