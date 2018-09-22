@@ -824,6 +824,7 @@ class _Z3EncoderSimple(object):
             A Z3 Optimizer to add hard constraints to
         """
         self.__add_index_in_bounds_fmla(optimizer)
+        self.__add_edges_exist(optimizer)
         self.__add_refactor_respects_order(optimizer)
         if self.num_partitions > 1:
             optimizer.add(self.idx.lsb_with(self.partition))
@@ -935,6 +936,13 @@ class _Z3EncoderSimple(object):
             h = optimizer.add_soft(_z3.And(i < self.idx, can_remove), len(p) + 1)
 
         return h
+
+    def __add_edges_exist(self, optimizer):
+       """Adds a formula asserting that edges in the refactoring actually exist"""
+       for (s, p) in product(self.sels, self.props):
+           e = simpleRule(s, p)
+           if e not in self.last_index:
+               optimizer.add(_z3.Not(self.__has_edge_e(e)))
 
     def __add_refactor_respects_order(self, optimizer):
         """Adds a formula asserting that the refactoring does not violate the
