@@ -7,7 +7,6 @@ from math import ceil
 
 import tinycss2
 import cssselect_parser
-import webencodings
 
 # Let's assume this will never appear in any CSS file...
 multiprop_separator = "#+#"
@@ -47,9 +46,9 @@ def fromfile(filename, multiprop = False):
         a CSSFile representation of the CSS file
     """
     bytes = open(filename).read()
-    stylesheet = tinycss2.parse_stylesheet(bytes,
-                                           skip_whitespace=True,
-                                           skip_comments=True)
+    stylesheet, enc = tinycss2.parse_stylesheet_bytes(bytes,
+                                                      skip_whitespace=True,
+                                                      skip_comments=True)
     return CSSFile(stylesheet, multiprop)
 
 def fromstring(css, multiprop = False):
@@ -572,34 +571,16 @@ class CSSFile:
         return (props, rules)
 
     def __normalise_css_value(self, value):
-        """At the moment this removes unicode and handles ie hacks, but
-        should really do things like remove spaces, convert all colours
-        to hex format and so on.
+        """At the moment this does nothing but remove unicode, but should really
+        do things like remove spaces, convert all colours to hex format and so
+        on.
 
         :param value:
             String giving a value of a css property
         :returns:
             A normalisation of that value
         """
-        def is_quoted(val):
-            sval = val.strip()
-            return (len(sval) >= 2 and
-                    ((sval[0] == '"' and sval[-1] == '"') or
-                     (sval[0] == "'" and sval[-1] == "'")))
-
-        def handle_ie_hacks(val):
-            # Avoid \9 being turned into \\\t (\t can be removed by
-            # strip) and \0/ gets (correctly) translated to \uFFFD/ so
-            # convert back
-            nine = (val.replace("\t", "\\9")
-                    if is_quoted(val)
-                    else val.replace("\\\t", "\\9"))
-            null = nine.replace(u"\uFFFD/", "\\0/")
-            return null
-
-        uv = _str_unicode(value)
-        ie = handle_ie_hacks(uv)
-        return ie.strip()
+        return _str_unicode(value).strip()
 
 
 

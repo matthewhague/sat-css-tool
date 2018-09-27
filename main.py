@@ -278,6 +278,5 @@ if __name__ == "__main__":
             write_compact(arguments)
         elif arguments['--size-only']:
             write_size(arguments)
-        else:
-            refactor_file(arguments)
+        refactor_file(arguments)
 
