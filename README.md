@@ -38,7 +38,7 @@ CSS file to maintain the overriding semantics).
 * [docopt 0.6.2](https://pypi.python.org/pypi/docopt)
 * [enum34](https://pypi.python.org/pypi/enum34)
 * [lxml 3.4.4](https://pypi.python.org/pypi/lxml)
-* [tinycss 0.3](https://pypi.python.org/pypi/tinycss)
+* [tinycss2 0.6.1](https://pypi.python.org/pypi/tinycss2)
 * [z3](http://research.microsoft.com/en-us/um/redmond/projects/z3/z3.html)
 
 Borrowed and modified code from
