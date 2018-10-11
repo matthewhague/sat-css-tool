@@ -39,6 +39,7 @@ CSS file to maintain the overriding semantics).
 * [enum34](https://pypi.python.org/pypi/enum34)
 * [lxml 3.4.4](https://pypi.python.org/pypi/lxml)
 * [tinycss2 0.6.1](https://pypi.python.org/pypi/tinycss2)
+* [toposort 1.5](https://pypi.org/project/toposort/)
 * [z3](http://research.microsoft.com/en-us/um/redmond/projects/z3/z3.html)
 
 Borrowed and modified code from
