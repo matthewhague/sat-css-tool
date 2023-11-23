@@ -2,7 +2,7 @@
 """Functions for analysing the satisfiability of string constraints"""
 
 from collections import defaultdict
-from itertools import ifilter, combinations
+from itertools import combinations
 
 def satisfiable(pos_cons, neg_cons):
     """A function for analysing constraints of the form e.g.
@@ -122,17 +122,17 @@ def satisfiable(pos_cons, neg_cons):
         if (len(posmap) == 1 and "|=" in posmap and
             len(negmap) == 0):
             for l1, l2 in combinations(getpos("|="), 2):
-                if not (unicode.startswith(l1, l2 + "-") or
-                        unicode.startswith(l2, l1 + "-")):
+                if not (str.startswith(l1, l2 + "-") or
+                        str.startswith(l2, l1 + "-")):
                     return False
             return True
 
-        print "WARNING: String Constraints Unknown, assuming True!"
-        print "Pos cons: ", pos_cons
-        print "Neg cons: ", neg_cons
-        print "Pos map len", len(posmap)
-        print "has |=", "|=" in posmap
-        print "Pos map", posmap
+        print("WARNING: String Constraints Unknown, assuming True!")
+        print("Pos cons: ", pos_cons)
+        print("Neg cons: ", neg_cons)
+        print("Pos map len", len(posmap))
+        print("has |=", "|=" in posmap)
+        print("Pos map", posmap)
 
     return True # TODO
 

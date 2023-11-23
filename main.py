@@ -40,6 +40,7 @@ import cssfile
 
 from cliqueCSS import cliqueCSS
 from deduct_refactor import AnnealType, refactor
+import importlib
 
 ANNEAL_TYPES = { "none": AnnealType.none,
                  "good": AnnealType.good,
@@ -198,15 +199,15 @@ def _do_model_output(model):
                 if arguments['--write-compact']:
                     model.write_compact(sys.stdout)
                 else:
-                    print model
+                    print(model)
             else:
                 fout = open(filename, 'w')
                 if arguments['--write-compact']:
                     model.write_compact(fout)
                 else:
-                    print >> fout, model
+                    print(model, file=fout)
                 fout.close()
-                print "Model output to", filename
+                print("Model output to", filename)
     except DocoptExit:
         pass
 
@@ -259,19 +260,18 @@ def write_size(arguments):
     css = cssfile.fromfile(arguments['<file>'],
                            arguments['--multi-props'])
     clique = simplecssbuilder.cliquefromcssfile(css)
-    print "Calculated file size is", clique.size(), "bytes"
+    print("Calculated file size is", clique.size(), "bytes")
 
 
 if __name__ == "__main__":
-    reload(sys)
-    sys.setdefaultencoding("utf-8")
+    importlib.reload(sys)
     arguments = docopt(__doc__, version='v0.1')
 
     if arguments['--emptiness']:
         emptiness_mode()
     else:
         if arguments['<file>'] is None:
-            print "Please provide a file name! (see --help)"
+            print("Please provide a file name! (see --help)")
             exit(-1)
 
         if arguments['--compact-only']:

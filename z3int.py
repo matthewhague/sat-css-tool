@@ -108,7 +108,7 @@ class Z3BinInt:
 
     def __eq__(self, other):
         def do_eq():
-            if isinstance(other, (int, long)):
+            if isinstance(other, int):
                 if other >= self._maxint:
                     return self._z3.Or()
                 elif other < 0:
@@ -117,11 +117,11 @@ class Z3BinInt:
                     obits = self.__int_to_bitvec(other)
                     return self._z3.And([self._bvars[j] if obits[j] == '1'
                                                         else self._z3.Not(self._bvars[j])
-                                         for j in xrange(len(self._bvars))])
+                                         for j in range(len(self._bvars))])
             elif isinstance(other, Z3BinInt):
                 # Use assume always 1 bit
                 cons = [ self._bvars[0] == other._bvars[0] ]
-                for j in xrange(1, max(len(self._bvars), len(other._bvars))):
+                for j in range(1, max(len(self._bvars), len(other._bvars))):
                     if j >= len(self._bvars):
                         cons.append(self._z3.Not(other._bvars[j]))
                     elif j >= len(other._bvars):
@@ -143,7 +143,7 @@ class Z3BinInt:
 
     def __lt__(self, other):
         def do_lt():
-            if isinstance(other, (int, long)):
+            if isinstance(other, int):
                 real_max = pow(2, len(self._bvars))
                 if other >= real_max:
                     return self._z3.And()
@@ -159,7 +159,7 @@ class Z3BinInt:
                         # can't be less than 0
                         lt.append(self._z3.Or())
 
-                    for j in xrange(1, len(self._bvars)):
+                    for j in range(1, len(self._bvars)):
                         if obits[j] == '1':
                             lt.append(self._z3.Or(# same here and lt below
                                                   self._z3.And(self._bvars[j], lt[j-1]),
@@ -174,7 +174,7 @@ class Z3BinInt:
             elif isinstance(other, Z3BinInt):
                 # Use assume always 1 bit
                 lt = [ self._z3.And(self._z3.Not(self._bvars[0]), other._bvars[0]) ]
-                for j in xrange(1, max(len(self._bvars), len(other._bvars))):
+                for j in range(1, max(len(self._bvars), len(other._bvars))):
                     if j >= len(self._bvars):
                         lt.append(self._z3.Or(other._bvars[j], lt[j - 1]))
                     elif j >= len(other._bvars):
@@ -200,7 +200,7 @@ class Z3BinInt:
 
     def __gt__(self, other):
         def do_gt():
-            if isinstance(other, (int, long)):
+            if isinstance(other, int):
                 real_max = pow(2, len(self._bvars))
                 if other >= real_max - 1:
                     return self._z3.Or()
@@ -216,7 +216,7 @@ class Z3BinInt:
                         # can't be gt 1
                         gt.append(self._z3.Or())
 
-                    for j in xrange(1, len(self._bvars)):
+                    for j in range(1, len(self._bvars)):
                         if obits[j] == '0':
                             gt.append(self._z3.Or(# same here and gt below
                                                   self._z3.And(self._z3.Not(self._bvars[j]),
@@ -230,7 +230,7 @@ class Z3BinInt:
                     return gt[-1]
             elif isinstance(other, Z3BinInt):
                 gt = [ self._z3.And(self._bvars[0], self._z3.Not(other._bvars[0])) ]
-                for j in xrange(1, max(len(self._bvars), len(other._bvars))):
+                for j in range(1, max(len(self._bvars), len(other._bvars))):
                     if j >= len(self._bvars):
                         gt.append(self._z3.And(self._z3.Not(other._bvars[j]), gt[j - 1]))
                     elif j >= len(other._bvars):
@@ -339,7 +339,7 @@ class Z3UnaryIntGT:
 
         self._variable_constraint = self._z3.And([ self._z3.Implies(self._bvars[i+1],
                                                                     self._bvars[i])
-                                                   for i in xrange(len(self._bvars) - 1) ])
+                                                   for i in range(len(self._bvars) - 1) ])
 
     def get_variable_constraints(self):
         """ :returns: list of Z3 expression that must be asserted for the integer
@@ -366,7 +366,7 @@ class Z3UnaryIntGT:
         if self._is_even is None:
             self._is_even = self._z3.Or([ self._z3.And(self._bvars[i],
                                                        self._z3.Not(self._bvars[i+1]))
-                                          for i in xrange(0, maxint - 1, 2) ])
+                                          for i in range(0, maxint - 1, 2) ])
             # if las number is even (maxint - 1)
             if maxint % 2 == 1:
                 self._is_even = self._z3.Or(self._is_even, self._bvars[maxint - 1])
@@ -375,7 +375,7 @@ class Z3UnaryIntGT:
 
     def __eq__(self, other):
         def do_eq():
-            if isinstance(other, (int, long)):
+            if isinstance(other, int):
                 maxint = len(self._bvars) - 1
                 if other > maxint:
                     return self._z3.Or()
@@ -401,7 +401,7 @@ class Z3UnaryIntGT:
 
     def __lt__(self, other):
         def do_lt():
-            if isinstance(other, (int, long)):
+            if isinstance(other, int):
                 if other >= len(self._bvars):
                     return self._z3.And()
                 elif other < 0:
@@ -423,7 +423,7 @@ class Z3UnaryIntGT:
 
     def __ge__(self, other):
         def do_gt():
-            if isinstance(other, (int, long)):
+            if isinstance(other, int):
                 if other >= len(self._bvars):
                     return self._z3.Or()
                 elif other < 0:
@@ -502,7 +502,7 @@ class Z3UnaryIntEq:
         maxint = len(self._bvars)
         if self._is_even is None:
             self._is_even = self._z3.Or([ self._z3.And(self._bvars[i], self._z3.Not(self._bvars[i+1]))
-                                 for i in xrange(0, maxint - 1, 2) ])
+                                 for i in range(0, maxint - 1, 2) ])
             # if las number is even (maxint - 1)
             if maxint % 2 == 1:
                 self._is_even = self._z3.Or(self._is_even, self._bvars[maxint - 1])
@@ -518,18 +518,18 @@ class Z3UnaryIntEq:
             return self._bvars[0]
 
         all_false_lte = [ self._z3.Not(self._bvars[0]) ]
-        for i in xrange(1, maxint + 1):
+        for i in range(1, maxint + 1):
             all_false_lte.append(self._z3.And(self._z3.Not(self._bvars[i]),
                                      all_false_lte[-1]))
 
         all_false_gte = [ self._z3.Not(self._bvars[maxint]) ]
-        for i in xrange(maxint - 1, -1, -1):
+        for i in range(maxint - 1, -1, -1):
             all_false_gte.append(self._z3.And(self._z3.Not(self._bvars[i]),
                                      all_false_gte[-1]))
         all_false_gte = all_false_gte[::-1]
 
         cons = [ self._z3.And(self._bvars[0], all_false_gte[1]) ]
-        for i in xrange(1, maxint - 1):
+        for i in range(1, maxint - 1):
             cons.append(self._z3.And(all_false_lte[i-1],
                             self._bvars[i],
                             all_false_gte[i+1]))
@@ -541,7 +541,7 @@ class Z3UnaryIntEq:
 
     def __eq__(self, other):
         def do_eq():
-            if isinstance(other, (int, long)):
+            if isinstance(other, int):
                 maxint = len(self._bvars) - 1
                 if other > maxint:
                     return self._z3.Or()
@@ -567,7 +567,7 @@ class Z3UnaryIntEq:
 
     def __lt__(self, other):
         def do_lt():
-            if isinstance(other, (int, long)):
+            if isinstance(other, int):
                 if other >= len(self._bvars):
                     return self._z3.And()
                 elif other <= 0:
@@ -589,7 +589,7 @@ class Z3UnaryIntEq:
 
     def __ge__(self, other):
         def do_gt():
-            if isinstance(other, (int, long)):
+            if isinstance(other, int):
                 if other >= len(self._bvars):
                     return self._z3.Or()
                 elif other < 0:

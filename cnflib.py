@@ -33,7 +33,7 @@ def cnf_v_iff_conj(v, conjs, optimizer, z3wrapper = z3):
         optimizer.add(z3wrapper.Or(not_v, c))
 
     # conjs[0] & ... & conjs[n] => v
-    clause = map(z3wrapper.Not, conjs)
+    clause = list(map(z3wrapper.Not, conjs))
     clause.append(v)
     optimizer.add(z3wrapper.Or(clause))
 
@@ -86,10 +86,10 @@ class _BitSequence:
 
         self._hash = (hash(i) +
                       hash(v) +
-                      sum(hash(bits[j]) for j in xrange(i+1, len(bits))))
+                      sum(hash(bits[j]) for j in range(i+1, len(bits))))
 
     def __str__(self):
-        s = "".join(self._bits[j] for j in xrange(self._i+1, len(self._bits)))
+        s = "".join(self._bits[j] for j in range(self._i+1, len(self._bits)))
         return s + v
 
     def __hash__(self):
@@ -102,7 +102,7 @@ class _BitSequence:
         if self._v != other._v or self._i != other._i or self._hash != other._hash:
             return False
 
-        for j in xrange(self._i+1, len(self._bits)):
+        for j in range(self._i+1, len(self._bits)):
             if self._bits[j] != other._bits[j]:
                 return False
 
@@ -191,7 +191,7 @@ class CNFInt:
             l = self.__get_fresh_var()
 
             # l => bit[0..i] = xbits
-            for j in xrange(len(xbits)):
+            for j in range(len(xbits)):
                 if xbits[j] == '0':
                     self.__add_constraint(self._z3.Or(self._z3.Not(l),
                                                       self._z3.Not(self._bvars[j])))
@@ -268,7 +268,7 @@ class CNFInt:
             A variable that is true iff self == other
         """
         def do_eq():
-            if isinstance(other, (int, long)):
+            if isinstance(other, int):
                 real_max = pow(2, len(self._bvars))
                 if other >= real_max or other < 0:
                     return self._false
@@ -276,7 +276,7 @@ class CNFInt:
                     obits = self.__int_to_bitvec(other)
                     lits = [ self._bvars[j] if obits[j] == '1'
                                             else self._z3.Not(self._bvars[j])
-                             for j in xrange(len(self._bvars)) ]
+                             for j in range(len(self._bvars)) ]
 
                     v = self.__get_fresh_var()
 
@@ -285,7 +285,7 @@ class CNFInt:
                         self.__add_constraint(self._z3.Or(self._z3.Not(v), l))
 
                     # lits => v
-                    if_dir = map(self._z3.Not, lits)
+                    if_dir = list(map(self._z3.Not, lits))
                     if_dir.append(v)
                     self.__add_constraint(self._z3.Or(if_dir))
 
@@ -305,7 +305,7 @@ class CNFInt:
 
     def __lt__(self, other):
         def do_lt():
-            if isinstance(other, (int, long)):
+            if isinstance(other, int):
                 real_max = pow(2, len(self._bvars))
                 if other >= real_max:
                     return self._true
@@ -319,7 +319,7 @@ class CNFInt:
                     # variable l will be true if the int is lt because of this
                     # position.  Not empty since 0000 invalid.
                     chances = []
-                    for i in xrange(len(self._bvars)):
+                    for i in range(len(self._bvars)):
                         if obits[i] == '0':
                             continue
                         l = self.__is_bit_seq(obits, i, '0')
@@ -356,7 +356,7 @@ class CNFInt:
         def do_gt():
 
 
-            if isinstance(other, (int, long)):
+            if isinstance(other, int):
                 real_max = pow(2, len(self._bvars))
                 if other >= real_max - 1:
                     return self._false
@@ -370,7 +370,7 @@ class CNFInt:
                     # variable l will be true if the int is gt because of this
                     # position.  Not empty since 1111 invalid.
                     chances = []
-                    for i in xrange(len(self._bvars)):
+                    for i in range(len(self._bvars)):
                         if obits[i] == '1':
                             continue
 
@@ -429,7 +429,7 @@ class CNFInt:
             l = self.__get_fresh_var()
 
             # l => bit[i+1..] = obit[i+1..] and bit[i] = v
-            for j in xrange(i+1, len(self._bvars)):
+            for j in range(i+1, len(self._bvars)):
                 if bits[j] == '0':
                     self.__add_constraint(self._z3.Or(self._z3.Not(l),
                                                       self._z3.Not(self._bvars[j])))
@@ -447,7 +447,7 @@ class CNFInt:
             neg_lits = [ (self._z3.Not(self._bvars[j])
                               if bits[j] == '1'
                               else self._bvars[j])
-                         for j in xrange(i+1, len(self._bvars)) ]
+                         for j in range(i+1, len(self._bvars)) ]
             if v == '0':
                 neg_lits.append(self._bvars[i])
             else: # '1'

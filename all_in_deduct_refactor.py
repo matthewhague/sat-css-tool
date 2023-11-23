@@ -128,7 +128,7 @@ def all_in_find_refactoring(clique, simple,
 
     optimizer.push()
 
-    print "Building encoding..."
+    print("Building encoding...")
     from main import get_no_bicliques
     start_t = default_timer()
     encoder = (_Z3EncoderBiclique(clique, simple, partition, num_partitions)
@@ -151,13 +151,13 @@ def all_in_find_refactoring(clique, simple,
     encoder.add_final_constraints(optimizer)
 
     end_t = default_timer()
-    print "Building encoding took", (end_t - start_t), "s"
+    print("Building encoding took", (end_t - start_t), "s")
 
-    print "Checking..."
+    print("Checking...")
     start_t = default_timer()
     res = optimizer.check(child_collector)
     end_t = default_timer();
-    print "Checking took", (end_t - start_t), "s"
+    print("Checking took", (end_t - start_t), "s")
 
     size = clique.size()
 
@@ -218,7 +218,7 @@ class _Z3EncoderBiclique(object):
         # order respected
         self.last_index = clique.build_last_index_map()
 
-        print "Getting bicliques..."
+        print("Getting bicliques...")
         start_t = default_timer()
 
         from main import get_unlim_bicliques
@@ -226,7 +226,7 @@ class _Z3EncoderBiclique(object):
 
         (max_bicliques, forbidden) = clique.get_orderable_max_bicliques(simple, split_factor)
         end_t = default_timer()
-        print "Getting bicliques took", (end_t - start_t), "s"
+        print("Getting bicliques took", (end_t - start_t), "s")
 
         parity_bicliques = [ bc
                              for (i, bc) in enumerate(max_bicliques)
@@ -258,7 +258,7 @@ class _Z3EncoderBiclique(object):
                     self.edgebcs[(s, p)].add((ss, pp))
 
         self.bidxs = { self.bicliques[i] : i
-                       for i in xrange(self.nbicliques) }
+                       for i in range(self.nbicliques) }
 
         sel_ex = { e1.getSelector() for (e1, e2) in self.simple.edgeOrder }
         prop_ex = { e1.getProperty() for (e1, e2) in self.simple.edgeOrder }
@@ -283,8 +283,8 @@ class _Z3EncoderBiclique(object):
 
             self.max_s_i = max(self.max_s_i, len(sels))
             self.max_p_i = max(self.max_p_i, len(props))
-            s_m = { sels[i] : i for i in xrange(len(sels)) }
-            p_m = { props[i] : i for i in xrange(len(props)) }
+            s_m = { sels[i] : i for i in range(len(sels)) }
+            p_m = { props[i] : i for i in range(len(props)) }
             self.s_excls[(ss, pp)] = s_m
             self.p_excls[(ss, pp)] = p_m
 
@@ -292,9 +292,9 @@ class _Z3EncoderBiclique(object):
         # in bucket i (where the jth selector depends on the chosen biclique for
         # that bucket)
         self.ex_s_vars = [ _z3.Bool("ex_s(" + str(j) + ")")
-                           for j in xrange(self.max_s_i) ]
+                           for j in range(self.max_s_i) ]
         self.ex_p_vars = [ _z3.Bool("ex_p(" + str(j) + ")")
-                           for j in xrange(self.max_p_i) ]
+                           for j in range(self.max_p_i) ]
 
         # some memoisation
         self.__has_edge_memo = dict()
@@ -381,14 +381,14 @@ class _Z3EncoderBiclique(object):
         ord_pp_res = self.simple.order_properties(ss_res, pp_res, ignore_rules)
 
         if ord_pp_res is None:
-            print "Dang, we got an unorderable one"
-            print pp_res
-            print " at pos ", idx, "forbidden at idx is"
-            print self.forbidden[idx]
-            print " and before "
-            print self.forbidden[idx - 1]
-            print " ahd after "
-            print self.forbidden[idx + 1]
+            print("Dang, we got an unorderable one")
+            print(pp_res)
+            print(" at pos ", idx, "forbidden at idx is")
+            print(self.forbidden[idx])
+            print(" and before ")
+            print(self.forbidden[idx - 1])
+            print(" ahd after ")
+            print(self.forbidden[idx + 1])
             exit(-1)
 
         # create new bucket
@@ -467,7 +467,7 @@ class _Z3EncoderBiclique(object):
             A Z3 Optimize to add constraints to
         """
         start_t = default_timer()
-        for i in xrange(self.clique.num_rules()):
+        for i in range(self.clique.num_rules()):
             (ss, pp) = self.clique.cliques[i]
             possible_bicliques = { self.bidxs[(ss2, pp2)]
                                    for (s, p) in product(ss, pp)
@@ -477,7 +477,7 @@ class _Z3EncoderBiclique(object):
             clause.append(_z3.Not(self.idx == i+1))
             optimizer.add(_z3.Or(clause))
         end_t = default_timer()
-        print "Biclique restriction took", (end_t - start_t), "s"
+        print("Biclique restriction took", (end_t - start_t), "s")
 
 
 
@@ -669,7 +669,7 @@ class _Z3EncoderBiclique(object):
             A Z3 handle to the soft constraints if created, else None
         """
         h = None
-        for i in xrange(self.clique.num_rules()):
+        for i in range(self.clique.num_rules()):
             h = self.__add_clique_count_size(i, optimizer)
 
         h2 = self.__add_clique_size(optimizer)
@@ -745,7 +745,7 @@ class _Z3EncoderBiclique(object):
 
         # to respect order we also have to be careful not to use forbidden
         # buckets!
-        for i in xrange(self.clique.num_rules()+1):
+        for i in range(self.clique.num_rules()+1):
             forbidden = self.forbidden[i]
             if len(forbidden) > 0:
                 for (ss, pp) in forbidden:
@@ -774,11 +774,11 @@ class _Z3EncoderBiclique(object):
         """
         for (ss, pp) in self.bicliques:
             # is biclique => not ex_s_var (for those out of range)
-            for i in xrange(len(ss), len(self.ex_s_vars), 1):
+            for i in range(len(ss), len(self.ex_s_vars), 1):
                 optimizer.add(_z3.Or(_z3.Not(self.__is_biclique((ss, pp))),
                                      _z3.Not(self.ex_s_vars[i])))
             # is biclique => not ex_p_var
-            for i in xrange(len(pp), len(self.ex_p_vars), 1):
+            for i in range(len(pp), len(self.ex_p_vars), 1):
                 optimizer.add(_z3.Or(_z3.Not(self.__is_biclique((ss, pp))),
                                      _z3.Not(self.ex_p_vars[i])))
 
@@ -892,7 +892,7 @@ class _Z3EncoderSimple(object):
             A Z3 handle to the soft constraints if created, else None
         """
         h = None
-        for i in xrange(self.clique.num_rules()):
+        for i in range(self.clique.num_rules()):
             h = self.__add_clique_count_size(i, optimizer)
 
         h2 = self._add_clique_size(optimizer)
@@ -981,11 +981,11 @@ class _Z3EncoderSimple(object):
         ss_res = set()
         pp_res = []
 
-        for (s, v) in self.s_vars.iteritems():
+        for (s, v) in self.s_vars.items():
             if _z3.is_true(model[v]):
                 ss_res.add(s)
 
-        for (p, v) in self.p_vars.iteritems():
+        for (p, v) in self.p_vars.items():
             if _z3.is_true(model[v]):
                 pp_res.append(p)
 
@@ -1006,9 +1006,9 @@ class _Z3EncoderSimple(object):
         # But a saving of two since the +1 is for separating , and ; overcounts
         # by 2 (since only needed as separators)
         h = None
-        for (s, v) in self.s_vars.iteritems():
+        for (s, v) in self.s_vars.items():
             h = optimizer.add_soft(_z3.Not(v), len(s) + 1)
-        for (p, v) in self.p_vars.iteritems():
+        for (p, v) in self.p_vars.items():
             h = optimizer.add_soft(_z3.Not(v), len(p) + 1)
         return h
 

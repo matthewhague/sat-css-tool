@@ -32,7 +32,7 @@ unsat = False
 
 def Bool(varName):
     if __DEBUG__:
-        print 'Bool: ' + varName
+        print('Bool: ' + varName)
 
     global __variableCounter__
     global memo
@@ -177,7 +177,7 @@ class Solver(object):
     def check(self):
         assert hasattr(self,'__formula__'), "Solver: check: formula was not"+\
                                             "yet added"
-        print "Starting", self.__solver__
+        print("Starting", self.__solver__)
         cmd = __solverDict__[self.__solver__]
         proc = Popen(cmd, stdout=PIPE, stdin=PIPE)
         self.__print_formula(proc.stdin)
@@ -209,7 +209,7 @@ class Solver(object):
                     else:
                         assignments[val] = True
             model = dict()
-            for i in xrange(__variableCounter__ + 1):
+            for i in range(__variableCounter__ + 1):
                 if i in assignments:
                     model[_Fmla(i, [])] = assignments[i]
                 else:

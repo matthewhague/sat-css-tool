@@ -46,7 +46,7 @@ top = 1 # maximum value
 
 def Bool(varName):
     if __DEBUG__:
-        print 'Bool: ' + varName
+        print('Bool: ' + varName)
 
     global __variableCounter__
     global memo
@@ -171,7 +171,7 @@ class Optimize(object):
         """child_collector ignored"""
         assert hasattr(self,'__formula__'), "Solver: check: formula was not"+\
                                             "yet added"
-        print "Starting", self.__solver__
+        print("Starting", self.__solver__)
         cmd, via_stdin = __solverDict__[self.__solver__]
 
         if via_stdin:
@@ -183,15 +183,15 @@ class Optimize(object):
             self.__print_formula(f)
             f.close()
             full_cmd = [cmd, name]
-            print full_cmd
+            print(full_cmd)
 
             if self.__solver__ == OUTPUT_AND_EXIT:
-                print "Dimacs written to", name
-                print "Returning unsat"
+                print("Dimacs written to", name)
+                print("Returning unsat")
                 return unsat
 
             proc = Popen(full_cmd, stdout=PIPE)
-            print "file written is", name, "remember to delete (left undeleted while in still unstable)"
+            print("file written is", name, "remember to delete (left undeleted while in still unstable)")
 
         def kill_proc(arg1, arg2):
             proc.kill()
@@ -250,7 +250,7 @@ class Optimize(object):
                     else:
                         assignments[val] = True
             model = dict()
-            for i in xrange(__variableCounter__ + 1):
+            for i in range(__variableCounter__ + 1):
                 if i in assignments:
                     model[_Lit(i)] = assignments[i]
                 else:
@@ -265,8 +265,8 @@ class Optimize(object):
                 num_clauses += int( len(fmla) > 0 )
 
         if __DEBUG__:
-            print 'p wcnf ' + str(__variableCounter__) + ' ' + \
-                   str(num_clauses) + ' ' + str(top) + '\n'
+            print('p wcnf ' + str(__variableCounter__) + ' ' + \
+                   str(num_clauses) + ' ' + str(top) + '\n')
 
         fout.write('p wcnf ' + str(__variableCounter__) + ' ' + \
                    str(num_clauses) + ' ' + str(top) + '\n')
@@ -284,7 +284,7 @@ class Optimize(object):
                 fout.write(out)
                 fout.write(' 0\n')
                 if __DEBUG__:
-                    print out + ' 0'
+                    print(out + ' 0')
                 fout.flush()
         fout.close()
 
@@ -467,14 +467,14 @@ def main():
     y = Bool('y')
     opt = Optimize('open-wbo')
     opt.add(Or(x,y))
-    print type(Not(x))
+    print(type(Not(x)))
     opt.add_soft(x,3)
     h = opt.add_soft(x,2)
     opt.add_soft(y,5)
     opt.add_soft(Not(y),6)
     opt.check()
-    print opt.model()
-    print opt.value()
+    print(opt.model())
+    print(opt.value())
 
 if __name__ == '__main__':
     main()

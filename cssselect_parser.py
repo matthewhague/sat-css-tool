@@ -23,8 +23,8 @@ import re
 import operator
 
 if sys.version_info[0] < 3:
-    _unicode = unicode
-    _unichr = unichr
+    _unicode = str
+    _unichr = chr
 else:
     _unicode = str
     _unichr = chr
@@ -517,7 +517,6 @@ def parse_selector(stream):
         result = CombinedSelector(result, combinator, next_selector)
     return result, pseudo_element
 
-
 def parse_simple_selector(stream, inside_negation=False):
     stream.skip_whitespace()
     selector_start = len(stream.used)
@@ -582,12 +581,12 @@ def parse_simple_selector(stream, inside_negation=False):
                     raise SelectorSyntaxError('Got nested :not()')
                 argument, argument_pseudo_element = parse_simple_selector(
                     stream, inside_negation=True)
-                next = stream.next()
+                next_token = stream.next()
                 if argument_pseudo_element:
                     raise SelectorSyntaxError(
                         'Got pseudo-element ::%s inside :not() at %s'
-                        % (argument_pseudo_element, next.pos))
-                if next != ('DELIM', ')'):
+                        % (argument_pseudo_element, next_token.pos))
+                if next_token != ('DELIM', ')'):
                     raise SelectorSyntaxError("Expected ')', got %s" % (next,))
                 result = Negation(result, argument)
             else:
@@ -605,32 +604,32 @@ def parse_arguments(stream):
     arguments = []
     while 1:
         stream.skip_whitespace()
-        next = stream.next()
-        if next.type in ('IDENT', 'STRING', 'NUMBER') or next in [
+        next_token = stream.next()
+        if next_token.type in ('IDENT', 'STRING', 'NUMBER') or next_token in [
                 ('DELIM', '+'), ('DELIM', '-')]:
-            arguments.append(next)
-        elif next == ('DELIM', ')'):
+            arguments.append(next_token)
+        elif next_token == ('DELIM', ')'):
             return arguments
         else:
             raise SelectorSyntaxError(
-                "Expected an argument, got %s" % (next,))
+                "Expected an argument, got %s" % (next_token,))
 
 
 def parse_attrib(selector, stream):
     stream.skip_whitespace()
     attrib = None
-    next = stream.peek()
-    if next.type == 'IDENT':
+    next_token = stream.peek()
+    if next_token.type == 'IDENT':
         stream.next()
-        attrib = next.value
-    elif next == ('DELIM', '*'):
+        attrib = next_token.value
+    elif next_token == ('DELIM', '*'):
         stream.next()
         attrib = None
-    elif next == ('DELIM', '|'):
+    elif next_token == ('DELIM', '|'):
         attrib = ""
     else:
         raise SelectorSyntaxError(
-            "Expected ident, '*', or '|', got %s" % (next,))
+            "Expected ident, '*', or '|', got %s" % (next_token,))
     if attrib is None and stream.peek() != ('DELIM', '|'):
         raise SelectorSyntaxError(
             "Expected '|', got %s" % (stream.peek(),))
@@ -649,28 +648,28 @@ def parse_attrib(selector, stream):
         op = None
     if op is None:
         stream.skip_whitespace()
-        next = stream.next()
-        if next == ('DELIM', ']'):
+        next_token = stream.next()
+        if next_token == ('DELIM', ']'):
             return Attrib(selector, namespace, attrib, 'exists', None)
-        elif next == ('DELIM', '='):
+        elif next_token == ('DELIM', '='):
             op = '='
-        elif next.is_delim('^', '$', '*', '~', '|', '!') and (
+        elif next_token.is_delim('^', '$', '*', '~', '|', '!') and (
                 stream.peek() == ('DELIM', '=')):
-            op = next.value + '='
+            op = next_token.value + '='
             stream.next()
         else:
             raise SelectorSyntaxError(
-                "Operator expected, got %s" % (next,))
+                "Operator expected, got %s" % (next_token,))
     stream.skip_whitespace()
     value = stream.next()
     if value.type not in ('IDENT', 'STRING'):
         raise SelectorSyntaxError(
             "Expected string or ident, got %s" % (value,))
     stream.skip_whitespace()
-    next = stream.next()
-    if next != ('DELIM', ']'):
+    next_token = stream.next()
+    if next_token != ('DELIM', ']'):
         raise SelectorSyntaxError(
-            "Expected ']', got %s" % (next,))
+            "Expected ']', got %s" % (next_token,))
     return Attrib(selector, namespace, attrib, op, value.value)
 
 
@@ -861,7 +860,7 @@ class TokenStream(object):
         self.peeked = None
         self._peeking = False
         try:
-            self.next_token = self.tokens.next
+            self.next_token = self.tokens.__next__
         except AttributeError:
             # Python 3
             self.next_token = self.tokens.__next__
@@ -872,9 +871,9 @@ class TokenStream(object):
             self.used.append(self.peeked)
             return self.peeked
         else:
-            next = self.next_token()
-            self.used.append(next)
-            return next
+            next_token = self.next_token()
+            self.used.append(next_token)
+            return next_token
 
     def peek(self):
         if not self._peeking:
@@ -884,20 +883,20 @@ class TokenStream(object):
 
     def next_ident(self):
         self.skip_whitespace()
-        next = self.next()
-        if next.type != 'IDENT':
-            raise SelectorSyntaxError('Expected ident, got %s' % (next,))
-        return next.value
+        next_token = self.next()
+        if next_token.type != 'IDENT':
+            raise SelectorSyntaxError('Expected ident, got %s' % (next_token,))
+        return next_token.value
 
     def next_ident_or_star(self):
-        next = self.next()
-        if next.type == 'IDENT':
-            return next.value
-        elif next == ('DELIM', '*'):
+        next_token = self.next()
+        if next_token.type == 'IDENT':
+            return next_token.value
+        elif next_token == ('DELIM', '*'):
             return None
         else:
             raise SelectorSyntaxError(
-                "Expected ident or '*', got %s" % (next,))
+                "Expected ident or '*', got %s" % (next_token,))
 
     def skip_whitespace(self):
         peek = self.peek()

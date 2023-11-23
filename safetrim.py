@@ -103,7 +103,7 @@ def safe_trim(css, colored_edges):
             counter += 1
 
         # update the scores
-        Opts = rem_options.keys()
+        Opts = list(rem_options.keys())
         for opt in rem_options:
             (t,name,j) = opt
             #assert isinstance(name,str), "name is" + str(type(name))
@@ -147,7 +147,7 @@ def safe_trim(css, colored_edges):
         (rem_options,rem_options_wit) = compute_rem_options()
         if len(rem_options) == 0:
             break
-        best_opt = max(rem_options.iteritems(),key=itemgetter(1))[0]
+        best_opt = max(iter(rem_options.items()),key=itemgetter(1))[0]
         (t,tname,i) = best_opt
         ruleSet = rem_options_wit[best_opt]
         update_hash_table(ruleSet,i)
@@ -174,10 +174,10 @@ def safe_trim(css, colored_edges):
         pp = pp_uniq
         duplicates_removed += pp_duplicates
 
-    print 'The number of nodes removed by safe_trim is', node_removed
-    print 'The number of buckets removed by safe_trim is', buckets_removed
-    print 'The number of local property duplicates removed by safe_trim is', \
-            duplicates_removed
+    print('The number of nodes removed by safe_trim is', node_removed)
+    print('The number of buckets removed by safe_trim is', buckets_removed)
+    print('The number of local property duplicates removed by safe_trim is', \
+            duplicates_removed)
 
     return node_removed
 

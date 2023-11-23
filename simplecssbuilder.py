@@ -249,7 +249,7 @@ def fromcssfile(css, make_clique_css = False):
                                ignored_rules = css.get_ignored_rules())
 
     end_time = default_timer()
-    print "Constructing CSS Representations took", (end_time - start_time), "s"
+    print("Constructing CSS Representations took", (end_time - start_time), "s")
 
     if not make_clique_css:
         return simple_css
@@ -405,9 +405,9 @@ def selectors_overlap(css1, css2):
     global numnontrivialchecks
     global numpositivenontrivial
 
-    if _selectors_overlap_memo.has_key((css1, css2)):
+    if (css1, css2) in _selectors_overlap_memo:
         return _selectors_overlap_memo[(css1, css2)]
-    elif _selectors_overlap_memo.has_key((css2, css1)):
+    elif (css2, css1) in _selectors_overlap_memo:
         return _selectors_overlap_memo[(css2, css1)]
     else:
         numchecks += 1
@@ -530,7 +530,7 @@ def _make_selector_automata(css):
     :returns:
         An automaton representation of the selector
     """
-    if _selectors_automata.has_key(css):
+    if css in _selectors_automata:
         return _selectors_automata[css]
     else:
         aut = cssautomaton.fromselector(css)

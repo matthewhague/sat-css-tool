@@ -71,21 +71,21 @@ def main():
     filename = 'file.wcnf'
     if len(sys.argv) > 0:
         filename = sys.argv[1]
-        print sys.argv[1]
+        print(sys.argv[1])
 
     fin = open(filename,'r')
     (opt,h) = construct_z3_optimizer(fin)
 
     opt.set('maxsat_engine', 'wmax')
 
-    print "Checking..."
+    print("Checking...")
     start_t = default_timer()
     opt.check()
     end_t = default_timer()
-    print "Done in", (end_t - start_t), "s"
+    print("Done in", (end_t - start_t), "s")
 
-    print opt.model()
-    print h.value()
+    print(opt.model())
+    print(h.value())
 
 if __name__ == '__main__':
     main()

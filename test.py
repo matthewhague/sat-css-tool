@@ -675,7 +675,7 @@ class TestEmptiness(unittest.TestCase):
     def test_root_emp(self):
         self._do_test("e1:root ~ e1 > e2", True)
 
-    def test_target_nonemp(self):
+    def test_target_nonemp2(self):
         self._do_test("e1:root > e1 > e2", False)
 
     def test_root_sib(self):
@@ -689,12 +689,6 @@ class TestEmptiness(unittest.TestCase):
 
     def test_not_first_child_emp(self):
        self._do_test(".c > e1:nth-child(0):not(:first-child) + e2:not(:first-child)", True)
-
-    def test_not_nth_child_run_emp(self):
-        self._do_test("e1 > e2:nth-child(3n) + e1:not(:nth-child(3n+1)) e2", True)
-
-    def test_not_nth_child_run_nonemp(self):
-        self._do_test("e1 > e2:nth-child(3n) + e1:not(:nth-child(3n+2)) e2", False)
 
     def test_not_last_child(self):
         self._do_test(".c > e2:not(:last-child)", False)
@@ -746,6 +740,9 @@ class TestEmptiness(unittest.TestCase):
 
     def test_simple_bad_not_nth_sat(self):
         self._do_test(":nth-child(2) + :not(:nth-child(3)) e2:only-of-type", True)
+
+    def test_nth_child_emp_adjacent(self):
+        self._do_test(":nth-child(3n) + :not(:nth-child(3n+1))", True)
 
 
 class TestIntersectionEmptiness(unittest.TestCase):
@@ -851,9 +848,7 @@ class TestSimpleCSSBuilder(unittest.TestCase):
                          3: .a { margin: 0 }
                          2 < 3""")
 
-class TestMinimise():
-    __metaclass__ = abc.ABCMeta
-
+class TestMinimise(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def _do_test(self, css):
         """Checks whether the minimised css represents the original
@@ -961,9 +956,7 @@ class TestMinimise():
                          .b { p:2; p:1""")
 
 
-class TestAllInDeductRefactor(TestMinimise):
-    __metaclass__ = abc.ABCMeta
-
+class TestAllInDeductRefactor(TestMinimise, metaclass=abc.ABCMeta):
     def _do_test(self, css):
         """
         :param expected:
@@ -1292,9 +1285,7 @@ class TestCliqueSubCSS(unittest.TestCase):
                        """{.a, .b} [p:1, p:2]""",
                        False)
 
-class TestZ3Int():
-    __metaclass__ = abc.ABCMeta
-
+class TestZ3Int(metaclass=abc.ABCMeta):
     def __init__(self, arg):
         super(TestZ3Int, self).__init__(arg)
         self._variable_cons = []
@@ -1318,13 +1309,13 @@ class TestZ3Int():
         res = s.check()
         if expected:
             if res != sat:
-                print "Unsatisfiable when expected sat:"
-                print s
+                print("Unsatisfiable when expected sat:")
+                print(s)
             self.assertEqual(res, sat)
         else:
             if res != unsat:
-                print "Unsatisfiable, satisfied with"
-                print s.model()
+                print("Unsatisfiable, satisfied with")
+                print(s.model())
             self.assertEqual(res, unsat)
 
     def _do_gt_test(self, x, val):

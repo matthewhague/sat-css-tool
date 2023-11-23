@@ -30,7 +30,7 @@ sat = True
 
 def Bool(varName):
     if __DEBUG__:
-        print 'Bool: ' + varName
+        print('Bool: ' + varName)
 
     global __variableCounter__
     global memo
@@ -52,7 +52,7 @@ def human_readable(fmla):
         The list of clauses with variable names replacing numbers
     """
     global memo
-    names = { i : n for (n, i) in memo.iteritems() }
+    names = { i : n for (n, i) in memo.items() }
     return [ [ names[i] if i > 0 else "!" + names[-i]
                for i in clause ]
              for clause in fmla ]
@@ -118,7 +118,7 @@ class Solver(object):
         for clause in self.__formula__:
             if __DEBUG__:
                 # printing the clause
-                print 'print_formula: ' + clause
+                print('print_formula: ' + clause)
 
             clauseStr = [str(varIndex) for varIndex in clause]
             # e.g. clauseStr = ['7','-8'], then Tuple = ('','7 -8')
@@ -136,7 +136,7 @@ class Solver(object):
         call([__solverDict__[self.__solver__],__outputFile__])
 
 def main():
-    print [ Or(Not(Bool('x')),Bool('y'),Bool('z'),Bool('z1')) ]
+    print([ Or(Not(Bool('x')),Bool('y'),Bool('z'),Bool('z1')) ])
 
 if __name__ == '__main__':
     main()

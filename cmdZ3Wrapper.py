@@ -7,7 +7,6 @@ Note: Only currently supports bools
 import abc
 from subprocess import Popen, PIPE
 import re
-from string import maketrans
 import sys
 import os
 
@@ -60,9 +59,7 @@ def _get_long_name(name):
 class CmdZ3WrapperException(Exception):
     pass
 
-class _Fmla(object):
-    __metaclass__ = abc.ABCMeta
-
+class _Fmla(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def get_variables(self):
         """:returns: A dict of variable names (string) to z3 types (string) used
@@ -107,7 +104,7 @@ class _ParenFmla(_Fmla):
         self._variables = { v : t
                             for argument in self._arguments
                                 if isinstance(argument, _Fmla)
-                            for (v, t) in argument.get_variables().iteritems() }
+                            for (v, t) in argument.get_variables().items() }
 
         for a in self._arguments:
             if a is None:
@@ -160,13 +157,12 @@ class _UnFmla(_ParenFmla):
         super(_UnFmla, self).__init__(operator, "", (arg1, ))
 
 
-_trantable = maketrans('():,# "\'[]=\\|;/&', 'lrcChsqQLRebpSfA')
+_trantable = str.maketrans('():,# "\'[]=\\|;/&', 'lrcChsqQLRebpSfA')
 
-class _Variable(_Fmla):
+class _Variable(_Fmla, metaclass=abc.ABCMeta):
     """A Z3 variable that needs declaring"""
 
     """A Z3 boolean can be used with"""
-    __metaclass__ = abc.ABCMeta
 
     def __init__(self, name, the_type):
         """A boolean.  Note renames chars by _trantable, so careful of clashes!.
@@ -243,10 +239,9 @@ class Bool(_Variable):
         assert isinstance(other, Bool)
         return Eq(self, other)
 
-class _ArithExpr(object):
+class _ArithExpr(object, metaclass=abc.ABCMeta):
     """Representation of Z3 arithmetic.  E.g. an integer variable x, or a sum (+
     x y)"""
-    __metaclass__ = abc.ABCMeta
 
     def __eq__(self, other):
         return Eq(self, other)
@@ -533,9 +528,12 @@ class _Z3Solver(object):
             child_collector.get_create_child_lock()
 
         try:
-            proc = Popen([_Z3_PATH, "-in"], stdout=PIPE, stdin=PIPE)
+            proc = Popen(
+                [_Z3_PATH, "-in"],
+                stdout=PIPE, stdin=PIPE, encoding="utf-8"
+            )
         except OSError:
-            print "Error running Z3, did you make sure", _Z3_PATH, "exists?"
+            print("Error running Z3, did you make sure", _Z3_PATH, "exists?")
             exit(-1)
 
         if child_collector is not None:
@@ -563,14 +561,14 @@ class _Z3Solver(object):
         # always output model if exists
 #        output.write('(set-option :dump-models true)\n')
 
-        for (opt, value) in self._options.iteritems():
+        for (opt, value) in self._options.items():
             output.write('(set-option :')
             output.write(opt)
             output.write(' ')
             output.write(str(value))
             output.write(')\n')
 
-        for (v, t) in self._frames[-1].get_variables().iteritems():
+        for (v, t) in self._frames[-1].get_variables().items():
             output.write('(declare-fun ')
             output.write(v)
             output.write(' () ')
@@ -623,7 +621,9 @@ class _Z3Solver(object):
             if handle is not None:
                 valline = inpipe.readline()
                 # remove ()s from value and convert to int
-                handle._set_value(int(valline.translate(None, '()')))
+                handle._set_value(int(
+                    valline.translate(str.maketrans('', '', '()'))
+                ))
             # read trailing )
             inpipe.readline()
 
@@ -639,7 +639,7 @@ class _Z3Solver(object):
                 varname = m.group(_model_var_name_group)
 
                 line = inpipe.readline()
-                varval = line.translate(None, ')\n ').strip()
+                varval = line.translate(str.maketrans('', '', ')\n ')).strip()
 
                 self._model.set_value(varname, varval)
 

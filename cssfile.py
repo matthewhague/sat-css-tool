@@ -46,9 +46,9 @@ def fromfile(filename, multiprop = False):
         a CSSFile representation of the CSS file
     """
     bytes = open(filename).read()
-    stylesheet, enc = tinycss2.parse_stylesheet_bytes(bytes,
-                                                      skip_whitespace=True,
-                                                      skip_comments=True)
+    stylesheet = tinycss2.parse_stylesheet(bytes,
+                                           skip_whitespace=True,
+                                           skip_comments=True)
     return CSSFile(stylesheet, multiprop)
 
 def fromstring(css, multiprop = False):
@@ -61,9 +61,9 @@ def fromstring(css, multiprop = False):
     :returns:
         a CSSFile representation of the CSS
     """
-    stylesheet, enc = tinycss2.parse_stylesheet(css,
-                                                skip_whitespace=True,
-                                                skip_comments=True)
+    stylesheet = tinycss2.parse_stylesheet(css,
+                                           skip_whitespace=True,
+                                           skip_comments=True)
     return CSSFile(stylesheet)
 
 def selector_str(sel):
@@ -219,7 +219,7 @@ def get_fun_sel_coefs(sel):
               tb.value == "odd"):
             return (2, 1)
         else:
-            print "Tb type: ", tb.type
+            print("Tb type: ", tb.type)
             raise_error()
     elif l == 2:
         t1, t2 = sel.arguments
@@ -246,8 +246,8 @@ def get_fun_sel_coefs(sel):
               t2.value.startswith("n+")):
             return (int(t1.value), int(t2.value[2:]))
         else:
-            print "T1:", t1.type
-            print "T2:", t2.type
+            print("T1:", t1.type)
+            print("T2:", t2.type)
             raise_error()
     elif l == 3:
         t1, t2, t3 = sel.arguments
@@ -358,7 +358,7 @@ class CSSFile:
             The list of CSS properties (such as font-style) defined in the
             CSS file as a iteration over strings
         """
-        return self.props.keys()
+        return list(self.props.keys())
 
     def get_specificities(self, prop):
         """
@@ -368,7 +368,7 @@ class CSSFile:
             An iteration over a list of selector specificities that define the
             given property name, as tuples (!important (bool), (a, b, c) (ints))
         """
-        return self.props[prop].keys()
+        return list(self.props[prop].keys())
 
     def get_values(self, prop, spec):
         """
@@ -382,7 +382,7 @@ class CSSFile:
             meaning prop is assigned val under selector sel with given specificity
             info.
         """
-        return self.props[prop][spec].keys()
+        return list(self.props[prop][spec].keys())
 
     def get_info(self, prop, spec, sel, val):
         """
@@ -436,7 +436,7 @@ class CSSFile:
                          self.multiprop,
                          size * i,
                          size * (i+1))
-                 for i in xrange(num_chunks) ]
+                 for i in range(num_chunks) ]
 
 
 
@@ -513,7 +513,7 @@ class CSSFile:
             if rule.type != "qualified-rule":
                 rule_str = tinycss2.serialize([rule])
                 self.ignored_rules.append(rule_str)
-                print "WARNING: merely copying rule ", rule_str
+                print("WARNING: merely copying rule ", rule_str)
                 continue
 
             parsed_rule_decls = tinycss2.parse_declaration_list(rule.content,
@@ -523,10 +523,10 @@ class CSSFile:
 
             for i, decl in enumerate(parsed_rule_decls):
                 if decl.type == "error":
-                    print "WARNING: parser error in", i+1, "th declaration of"
-                    print tinycss2.serialize(rule.content)
-                    print decl.message
-                    print "Ignoring declaration"
+                    print("WARNING: parser error in", i+1, "th declaration of")
+                    print(tinycss2.serialize(rule.content))
+                    print(decl.message)
+                    print("Ignoring declaration")
                     continue
                 rule_declarations.append(decl)
 
@@ -545,7 +545,7 @@ class CSSFile:
                 def build_val(vals):
                     return multiprop_separator.join(vals)
 
-                for ((name, priority), vals) in combined.iteritems():
+                for ((name, priority), vals) in combined.items():
                     decl = FakeDeclaration(name, priority, build_val(vals))
                     declarations.append(decl)
 
@@ -613,4 +613,4 @@ def _str_unicode(o):
     if o is None:
         return str(o)
     else:
-        return o.encode("utf-8")
+        return o.encode("utf-8").decode()

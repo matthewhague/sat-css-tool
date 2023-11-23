@@ -3,7 +3,7 @@
 
 import copy
 from collections import defaultdict
-from itertools import izip, chain, product
+from itertools import chain, product
 from timeit import default_timer
 
 from z3 import *
@@ -45,6 +45,14 @@ _known_ps = (_locally_checkable_ps |
 
 _emp_z3 = Solver()
 
+_enum_count = 0
+def _get_next_enum_id():
+    """Bit of a hack so we can create EnumSort for each automaton"""
+    global _enum_count
+    new_id = _enum_count
+    _enum_count += 1
+    return str(new_id)
+
 class HashableZ3:
     """Some kind of hashable constraints for z3 constraints and variables"""
     def __init__(self, z3):
@@ -85,9 +93,9 @@ def isempty(aut, data=None):
     """
     from main import get_unopt_emp
     if get_unopt_emp():
-        isempty_unoptimised(aut, data)
+        return isempty_unoptimised(aut, data)
     else:
-        isempty_optimised(aut, data)
+        return isempty_optimised(aut, data)
 
 def isempty_optimised(aut, data=None):
     """Checks using SAT whether the given CSSAutomaton is empty
@@ -348,7 +356,7 @@ def _normalise_atts(sel):
 
     # check all satisfiable
     # if not return None
-    for (ns, a), (pos_cons, neg_cons) in cons.iteritems():
+    for (ns, a), (pos_cons, neg_cons) in cons.items():
         gen_negs = cons[(None, a)][1] if (None, a) in cons else set([])
         all_negs = neg_cons.union(gen_negs)
         if not stringcons.satisfiable(pos_cons, all_negs):
@@ -371,7 +379,7 @@ def _normalise_pseudo_selectors(sel):
         if stype == "Pseudo" and s.ident in _locally_checkable_ps:
             return s.ident
         if stype == "Pseudo" and s.ident not in _known_ps:
-            print "WARNING: unrecognised pseudo class '", s.ident, "' in '", cssfile.selector_str_pt(sel), "' treating as simple boolean"
+            print("WARNING: unrecognised pseudo class '", s.ident, "' in '", cssfile.selector_str_pt(sel), "' treating as simple boolean")
             return s.ident
         return None
 
@@ -460,11 +468,17 @@ class AutEmptinessChecker:
                 self.eles.append("_dummy_ele" + str(i))
                 i += 1
 
-        self.nssort, vals = EnumSort("Namespace", map(str, self.nss))
-        self.nsvals = { ns : v for (ns, v) in izip(self.nss, vals) }
+        self._enum_id = _get_next_enum_id()
 
-        self.esort, vals = EnumSort("Element", map(str, self.eles))
-        self.evals = { e : v for (e, v) in izip(self.eles, vals) }
+        self.nssort, vals = EnumSort(
+            "Namespace" + self._enum_id, list(map(str, self.nss))
+        )
+        self.nsvals = { ns : v for (ns, v) in zip(self.nss, vals) }
+
+        self.esort, vals = EnumSort(
+            "Element" + self._enum_id, list(map(str, self.eles))
+        )
+        self.evals = { e : v for (e, v) in zip(self.eles, vals) }
 
         self.__tdelta = { (ns, e) : Int("d" + str((ns, e)))
                           for (ns, e) in product(self.nss, self.eles) }
@@ -718,7 +732,6 @@ class AutEmptinessChecker:
                                                     new_pvs,
                                                     new_pd,
                                                     new_pdstar)):
-
                         return False
 
                     newtup = (t.q1,
@@ -856,11 +869,11 @@ class AutEmptinessChecker:
             cons.append(next_pvs.pv == pvs.pv + pd + self.__delta)
             cons.append(self.__delta >= 0)
             if of_type:
-                cons.append(self.__delta + pd == Sum(self.__tdelta.values()))
+                cons.append(self.__delta + pd == Sum(list(self.__tdelta.values())))
         else:
             cons.append(next_pvs.pv == pvs.pv + pd)
             if of_type:
-                cons.append(pd == Sum(self.__tdelta.values()))
+                cons.append(pd == Sum(list(self.__tdelta.values())))
 
         if len(evars) > 0:
             return HashableZ3(Exists(evars, And(cons)))
@@ -1093,7 +1106,7 @@ class AutEmptinessChecker:
                            for (ns, e) in product(self.nss, self.eles) }
             cons |= { HashableZ3(pvs.tsumpv[(ns,e)] >=  0)
                       for (ns, e) in product(self.nss, self.eles) }
-            cons.add(HashableZ3(pvs.pv == Sum(pvs.tsumpv.values())))
+            cons.add(HashableZ3(pvs.pv == Sum(list(pvs.tsumpv.values()))))
             pvs.ns = self.__new_ns_var()
             pvs.ele = self.__new_ele_var()
 
@@ -1108,7 +1121,7 @@ class AutEmptinessChecker:
                                     pvs.tsum[(ns,e)] > pvs.tsumpv[(ns,e)]))
                       )
                       for (ns, e) in product(self.nss, self.eles) }
-            cons.add(HashableZ3(pvs.nlast == Sum(pvs.tsum.values())))
+            cons.add(HashableZ3(pvs.nlast == Sum(list(pvs.tsum.values()))))
 
         return (pvs, cons)
 
@@ -1149,7 +1162,7 @@ class AutEmptinessChecker:
         if a == 0:
             return x != b
 
-        b1 = b / a
+        b1 = b // a
         b2 = b % a
         bnd__b2 = (
             (self.__bvar > -abs(a))
@@ -1157,7 +1170,7 @@ class AutEmptinessChecker:
             else (self.__bvar < abs(a))
         )
         dir__b2 = (
-            (_bvar <= 0)
+            (self.__bvar <= 0)
             if (a * b1 < 0)
             else (self.__bvar >= 0)
         )
@@ -1322,9 +1335,9 @@ class _Z3NormAutEnc:
         self.has_id = self.__has_id_constraints()
         self.has_target = self.__has_pseudo_elements(set(["target"]))
         self.__setup_z3_variables()
-        self.__initial_constraints(),
-        self.__final_constraints(),
-        self.__transition_constraints(),
+        self.__initial_constraints()
+        self.__final_constraints()
+        self.__transition_constraints()
         self.__variable_constraints()
 
     def __nth(self, x, a, b):
@@ -1342,7 +1355,8 @@ class _Z3NormAutEnc:
             z3 clause enforcing the above
         """
         if a != 0:
-            return Exists([self.__nvar], x == a * self.__nvar + b)
+            return Exists([self.__nvar], And(self.__nvar >= 0,
+                                             x == a * self.__nvar + b))
         else:
             return x == b
 
@@ -1363,7 +1377,7 @@ class _Z3NormAutEnc:
         if a == 0:
             return x != b
 
-        b1 = b / a
+        b1 = b // a
         b2 = b % a
         bnd__b2 = (
             (self.__bvar > -abs(a))
@@ -1514,11 +1528,15 @@ class _Z3NormAutEnc:
 
         self.n = comps.num_trans
 
+        self._enum_id = _get_next_enum_id()
+
         # state variables
         aut_qs = list(comps.states)
-        self.qsort, vals = EnumSort("State", [q.name for q in aut_qs])
+        self.qsort, vals = EnumSort(
+            "State" + self._enum_id, [q.name for q in aut_qs]
+        )
         self.qvals = {}
-        for q, v in izip(aut_qs, vals):
+        for q, v in zip(aut_qs, vals):
             self.qvals[q] = v
         self.qvars = [Const("q" + str(i), self.qsort)
                       for i in range(self.n)]
@@ -1539,16 +1557,20 @@ class _Z3NormAutEnc:
                 eles.append("_dummy_ele" + str(i))
                 i += 1
 
-        self.nssort, vals = EnumSort("Namespace", map(str, nss))
+        self.nssort, vals = EnumSort(
+            "Namespace" + self._enum_id, list(map(str, nss))
+        )
         self.nsvals = {}
-        for ns, v in izip(nss, vals):
+        for ns, v in zip(nss, vals):
             self.nsvals[ns] = v
         self.nsvars = [Const("ns" + str(i), self.nssort)
                        for i in range(self.n)]
 
-        self.esort, vals = EnumSort("Element", map(str, eles))
+        self.esort, vals = EnumSort(
+            "Element" + self._enum_id, list(map(str, eles))
+        )
         self.evals = {}
-        for e, v in izip(eles, vals):
+        for e, v in zip(eles, vals):
             self.evals[e] = v
         self.evars = [Const("e" + str(i), self.esort)
                       for i in range(self.n)]
@@ -1557,9 +1579,11 @@ class _Z3NormAutEnc:
             ids = list(comps.ids)
             self.dummy_id = "_dummy_id"
             ids.append(self.dummy_id)
-            self.idsort, vals = EnumSort("ID2", map(str, ids))
+            self.idsort, vals = EnumSort(
+                "ID2_" + self._enum_id, list(map(str, ids))
+            )
             self.idvals = {}
-            for i, v in izip(ids, vals):
+            for i, v in zip(ids, vals):
                 self.idvals[i] = v
             self.idvars = [Const("id" + str(i), self.idsort)
                            for i in range(self.n)]
@@ -1591,9 +1615,11 @@ class _Z3NormAutEnc:
 
         # arrow variables
         arrows = [a for a in Arrow]
-        self.arrsort, vals = EnumSort("State", [str(a) for a in arrows])
+        self.arrsort, vals = EnumSort(
+            "Arrow" + self._enum_id, [str(a) for a in arrows]
+        )
         self.arrvals = {}
-        for a, v in izip(arrows, vals):
+        for a, v in zip(arrows, vals):
             self.arrvals[a] = v
         self.arrvars = [Const("a" + str(i), self.arrsort)
                         for i in range(self.n)]

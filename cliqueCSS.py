@@ -146,7 +146,7 @@ class cliqueCSS:
         """:return: the number of bytes needed for the properties and selectors"""
         return sum([self.clique_size(c) for c in self.cliques])
 
-    def clique_size(self, (ss, pp)):
+    def clique_size(self, xxx_todo_changeme):
         """
         :param (ss, pp):
             A biclique where ss in a set of selectors and pp a list of
@@ -155,6 +155,7 @@ class cliqueCSS:
             The size of the clique in bytes with two braces, commas between sels
             and ; between props
         """
+        (ss, pp) = xxx_todo_changeme
         return (sum([len(s) for s in ss]) +
                 sum([len(p) for p in pp]) +
                 len(ss) + len(pp))
@@ -182,7 +183,7 @@ class cliqueCSS:
         """
         rev_last_index = defaultdict(set)
 
-        for (e, i) in self.build_last_index_map().iteritems():
+        for (e, i) in self.build_last_index_map().items():
             rev_last_index[i].add(e)
 
         return rev_last_index
@@ -222,7 +223,7 @@ class cliqueCSS:
         s = r.getSelector()
         p = r.getProperty()
 
-        for j in xrange(len(self.cliques) - 1, i - 1, -1):
+        for j in range(len(self.cliques) - 1, i - 1, -1):
             (ss, pp) = self.cliques[j]
             if s in ss and p in pp:
                 return j
@@ -245,7 +246,7 @@ class cliqueCSS:
             raise IndexError
 
 
-        for j in xrange(i,len(self.cliques)):
+        for j in range(i,len(self.cliques)):
             (ss, pp) = self.cliques[j]
             for r in rSet:
                 s = r.getSelector()
@@ -276,7 +277,7 @@ class cliqueCSS:
         s2 = r2.getSelector()
         p2 = r2.getProperty()
 
-        for j in xrange(len(self.cliques)):
+        for j in range(len(self.cliques)):
             (ss, pp) = self.cliques[j]
             # Case when both s1 and p1 already in cliques
             if s1 in ss and p1 in pp:
@@ -333,7 +334,7 @@ class cliqueCSS:
             max_pos = self.num_rules()
 
         return { Sim.simpleRule(s, p)
-                 for i in xrange(min_pos, max_pos)
+                 for i in range(min_pos, max_pos)
                  for (s, p) in product(self.cliques[i][0],
                                        self.cliques[i][1]) }
 
@@ -349,15 +350,15 @@ class cliqueCSS:
 
         if not edgeSet <= css.edgeSet:
             if __DEBUG__:
-                print 'There are ' + str(len(edgeSet)) +' edges in edgeSet'
-                print 'There are ' + str(len(css.edgeSet)) +\
-                        ' edges in css.edgeSet'
-                print 'There are ' + str(len(edgeSet - css.edgeSet)) +\
-                        ' edges in edgeSet - css.edgeSet'
-                print 'There are ' + str(len(css.edgeSet - edgeSet)) +\
-                        ' edges in css.edgeSet - edgeSet'
-                print 'Edges missing from simple css: ' +\
-                        str(edgeSet - css.edgeSet)
+                print('There are ' + str(len(edgeSet)) +' edges in edgeSet')
+                print('There are ' + str(len(css.edgeSet)) +\
+                        ' edges in css.edgeSet')
+                print('There are ' + str(len(edgeSet - css.edgeSet)) +\
+                        ' edges in edgeSet - css.edgeSet')
+                print('There are ' + str(len(css.edgeSet - edgeSet)) +\
+                        ' edges in css.edgeSet - edgeSet')
+                print('Edges missing from simple css: ' +\
+                        str(edgeSet - css.edgeSet))
             return False
 
         return self.__edge_order_respected(css.edgeOrder)
@@ -374,15 +375,15 @@ class cliqueCSS:
 
         if not css.edgeSet <= edgeSet:
             if __DEBUG__:
-                print 'There are ' + str(len(edgeSet)) +' edges in edgeSet'
-                print 'There are ' + str(len(css.edgeSet)) +\
-                        ' edges in css.edgeSet'
-                print 'There are ' + str(len(edgeSet - css.edgeSet)) +\
-                        ' edges in edgeSet - css.edgeSet'
-                print 'There are ' + str(len(css.edgeSet - edgeSet)) +\
-                        ' edges in css.edgeSet - edgeSet'
-                print 'Edges missing from clique css: ' +\
-                        str(css.edgeSet - edgeSet)
+                print('There are ' + str(len(edgeSet)) +' edges in edgeSet')
+                print('There are ' + str(len(css.edgeSet)) +\
+                        ' edges in css.edgeSet')
+                print('There are ' + str(len(edgeSet - css.edgeSet)) +\
+                        ' edges in edgeSet - css.edgeSet')
+                print('There are ' + str(len(css.edgeSet - edgeSet)) +\
+                        ' edges in css.edgeSet - edgeSet')
+                print('Edges missing from clique css: ' +\
+                        str(css.edgeSet - edgeSet))
             return False
 
         return self.__edge_order_respected(css.edgeOrder)
@@ -408,7 +409,7 @@ class cliqueCSS:
 
         # compute the inverse of SHORTHAND_REL
         SHORTHAND_REL_inv = dict()
-        for k,vs in SHORTHAND_REL.iteritems():
+        for k,vs in SHORTHAND_REL.items():
             for v in vs:
                 SHORTHAND_REL_inv[v] = k
 
@@ -473,9 +474,9 @@ class cliqueCSS:
         # (if it become bad, it is bad at end)
         bad_bicliques = { (ss, pp) for (ss, pp) in max_bicliques
                                    if not simple.is_orderable_biclique(ss, pp) }
-        print "There are", len(bad_bicliques), "eventually bad bicliques out of", len(max_bicliques)
-        print "Biclique/rule ratio: ", len(max_bicliques) / float(len(self.cliques))
-        print "Bad/good ratio: ", len(bad_bicliques) / float(len(max_bicliques))
+        print("There are", len(bad_bicliques), "eventually bad bicliques out of", len(max_bicliques))
+        print("Biclique/rule ratio: ", len(max_bicliques) / float(len(self.cliques)))
+        print("Bad/good ratio: ", len(bad_bicliques) / float(len(max_bicliques)))
 
         num_rules = self.num_rules()
 
@@ -484,17 +485,17 @@ class cliqueCSS:
 
 
         if max_split_factor == 0:
-            print "Max split factor is 0, simply ignoring bad bicliques"
+            print("Max split factor is 0, simply ignoring bad bicliques")
             all_bicliques -= bad_bicliques
         else:
             max_split = -1
             if max_split_factor >= 0:
                 max_split = int(max_split_factor * len(max_bicliques))
-                print "Making at most", max_split, "new bicliques"
+                print("Making at most", max_split, "new bicliques")
             else:
-                print "Making any number of new bicliques"
+                print("Making any number of new bicliques")
 
-            for pos in xrange(num_rules + 1):
+            for pos in range(num_rules + 1):
                 # can't ignore rules that have had their last index
                 if pos > 0:
                     ignore_rules -= rev_last_index[pos - 1]
@@ -516,21 +517,21 @@ class cliqueCSS:
 
                 bad_bicliques = next_bad_bicliques
 
-            print "There were", len(max_bicliques), " max bicliques, eventually orderable", len(all_bicliques)
+            print("There were", len(max_bicliques), " max bicliques, eventually orderable", len(all_bicliques))
 
         from main import get_enumeration_output
         if get_enumeration_output():
-            print "Enumeration of bicliques Mi:"
+            print("Enumeration of bicliques Mi:")
             for (i, bc) in enumerate(all_bicliques):
-                print " ", i, ":", str(bc)
+                print(" ", i, ":", str(bc))
             if len(forbidden) == 0:
-                print "No bicliques were forbidden!"
+                print("No bicliques were forbidden!")
             else:
-                print "Forbidden F:"
-                for (i, bcs) in forbidden.iteritems():
-                    print " ", i, ":"
+                print("Forbidden F:")
+                for (i, bcs) in forbidden.items():
+                    print(" ", i, ":")
                     for bc in bcs:
-                        print "   ", str(bc)
+                        print("   ", str(bc))
 
         return (all_bicliques, forbidden)
 
@@ -557,9 +558,9 @@ class cliqueCSS:
             if (e1 in last_occurence and
                 e2 in last_occurence and
                 not last_occurence[e1] < last_occurence[e2]):
-                print "Edge ", e1, " last appears at property position", last_occurence[e1]
-                print "Edge ", e2, " last appears at property position", last_occurence[e2]
-                print "But the first should appear before the second!"
+                print("Edge ", e1, " last appears at property position", last_occurence[e1])
+                print("Edge ", e2, " last appears at property position", last_occurence[e2])
+                print("But the first should appear before the second!")
                 return False
 
         return True
@@ -579,17 +580,17 @@ class cliqueCSS:
 
         if edgeSet != css.edgeSet:
             if __DEBUG__:
-                print 'There are ' + str(len(edgeSet)) +' edges in edgeSet'
-                print 'There are ' + str(len(css.edgeSet)) +\
-                        ' edges in css.edgeSet'
-                print 'There are ' + str(len(edgeSet - css.edgeSet)) +\
-                        ' edges in edgeSet - css.edgeSet'
-                print 'There are ' + str(len(css.edgeSet - edgeSet)) +\
-                        ' edges in css.edgeSet - edgeSet'
-                print 'Edges missing from clique: ' +\
-                        str(css.edgeSet - edgeSet)
-                print 'Edges missing from simple css: ' +\
-                        str(edgeSet - css.edgeSet)
+                print('There are ' + str(len(edgeSet)) +' edges in edgeSet')
+                print('There are ' + str(len(css.edgeSet)) +\
+                        ' edges in css.edgeSet')
+                print('There are ' + str(len(edgeSet - css.edgeSet)) +\
+                        ' edges in edgeSet - css.edgeSet')
+                print('There are ' + str(len(css.edgeSet - edgeSet)) +\
+                        ' edges in css.edgeSet - edgeSet')
+                print('Edges missing from clique: ' +\
+                        str(css.edgeSet - edgeSet))
+                print('Edges missing from simple css: ' +\
+                        str(edgeSet - css.edgeSet))
             return False
 
         last_occurence = dict()
@@ -609,15 +610,15 @@ class cliqueCSS:
             # TODO: fix so edges can be in same bucket as long as they can be
             # ordered
             if not last_occurence[e1] < last_occurence[e2]:
-                print "Edge ", e1, " last appears at property position", last_occurence[e1]
-                print "Edge ", e1, " last appears at bucket", \
-                lo_to_bucket[last_occurence[e1]]
-                print self.cliques[lo_to_bucket[last_occurence[e1]]]
-                print "Edge ", e2, " last appears at property position", last_occurence[e2]
-                print "Edge ", e2, " last appears at bucket", \
-                lo_to_bucket[last_occurence[e2]]
-                print self.cliques[lo_to_bucket[last_occurence[e2]]]
-                print "But the first should appear before the second!"
+                print("Edge ", e1, " last appears at property position", last_occurence[e1])
+                print("Edge ", e1, " last appears at bucket", \
+                lo_to_bucket[last_occurence[e1]])
+                print(self.cliques[lo_to_bucket[last_occurence[e1]]])
+                print("Edge ", e2, " last appears at property position", last_occurence[e2])
+                print("Edge ", e2, " last appears at bucket", \
+                lo_to_bucket[last_occurence[e2]])
+                print(self.cliques[lo_to_bucket[last_occurence[e2]]])
+                print("But the first should appear before the second!")
                 return False
 
         return True
@@ -655,17 +656,17 @@ class cliqueCSS:
 
         if edgeSet != cssEdgeSet:
             if __DEBUG__:
-                print 'There are ' + str(len(edgeSet)) +' edges in edgeSet'
-                print 'There are ' + str(len(cssEdgeSet)) +\
-                        ' edges in cssEdgeSet'
-                print 'There are ' + str(len(edgeSet - cssEdgeSet)) +\
-                        ' edges in edgeSet - cssEdgeSet'
-                print 'There are ' + str(len(cssEdgeSet - edgeSet)) +\
-                        ' edges in cssEdgeSet - edgeSet'
-                print 'Edges missing from clique: ' +\
-                        str(cssEdgeSet - edgeSet)
-                print 'Edges missing from simple css: ' +\
-                        str(edgeSet - cssEdgeSet)
+                print('There are ' + str(len(edgeSet)) +' edges in edgeSet')
+                print('There are ' + str(len(cssEdgeSet)) +\
+                        ' edges in cssEdgeSet')
+                print('There are ' + str(len(edgeSet - cssEdgeSet)) +\
+                        ' edges in edgeSet - cssEdgeSet')
+                print('There are ' + str(len(cssEdgeSet - edgeSet)) +\
+                        ' edges in cssEdgeSet - edgeSet')
+                print('Edges missing from clique: ' +\
+                        str(cssEdgeSet - edgeSet))
+                print('Edges missing from simple css: ' +\
+                        str(edgeSet - cssEdgeSet))
             return False
 
         last_occurence = dict()
@@ -686,15 +687,15 @@ class cliqueCSS:
                 # TODO: fix so edges can be in same bucket as long as they can be
                 # ordered
                 if not last_occurence[e1] < last_occurence[e2]:
-                    print "Edge ", e1, " last appears at property position", last_occurence[e1]
-                    print "Edge ", e1, " last appears at bucket", \
-                    lo_to_bucket[last_occurence[e1]]
-                    print self.cliques[lo_to_bucket[last_occurence[e1]]]
-                    print "Edge ", e2, " last appears at property position", last_occurence[e2]
-                    print "Edge ", e2, " last appears at bucket", \
-                    lo_to_bucket[last_occurence[e2]]
-                    print self.cliques[lo_to_bucket[last_occurence[e2]]]
-                    print "But the first should appear before the second!"
+                    print("Edge ", e1, " last appears at property position", last_occurence[e1])
+                    print("Edge ", e1, " last appears at bucket", \
+                    lo_to_bucket[last_occurence[e1]])
+                    print(self.cliques[lo_to_bucket[last_occurence[e1]]])
+                    print("Edge ", e2, " last appears at property position", last_occurence[e2])
+                    print("Edge ", e2, " last appears at bucket", \
+                    lo_to_bucket[last_occurence[e2]])
+                    print(self.cliques[lo_to_bucket[last_occurence[e2]]])
+                    print("But the first should appear before the second!")
                     return False
 
         return True

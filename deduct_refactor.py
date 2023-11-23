@@ -16,7 +16,7 @@ import operator
 from enum import Enum
 import random
 import multiprocessing
-import Queue
+import queue
 import os
 import shutil
 
@@ -53,13 +53,13 @@ def refactor(css, timebound = 60000):
     :returns:
         A refactored version of css that is smaller, as a cliqueCSS
     """
-    print "Building cliqueCSS..."
+    print("Building cliqueCSS...")
     (simple, clique) = simplecssbuilder.fromcssfile(css, make_clique_css = True)
 
     from main import get_output_simple, get_dont_refactor
     if get_output_simple():
-        print "Simple CSS:"
-        print str(simple)
+        print("Simple CSS:")
+        print(str(simple))
     if get_dont_refactor():
         return clique
 
@@ -72,9 +72,9 @@ def refactor(css, timebound = 60000):
 
     end_t = default_timer()
 
-    print "Time to refactor:", (end_t - start_t), "s"
+    print("Time to refactor:", (end_t - start_t), "s")
 
-    print "Checking result is correct."
+    print("Checking result is correct.")
     assert clique.equivalent(simple), \
             "deduct_refactor did not construct an equivalent CSS"
 
@@ -129,8 +129,8 @@ class RefactorThread:
         num_tries = 0
         size = clique.size()
 
-        print "clique has", clique.num_rules(), "rules"
-        print "clique has", clique.num_nodes(), "nodes"
+        print("clique has", clique.num_rules(), "rules")
+        print("clique has", clique.num_nodes(), "nodes")
 
         total_parts = self.__num_threads * self.__num_parts
         base_part = self.__thread_no * self.__num_parts
@@ -145,8 +145,8 @@ class RefactorThread:
 
             part_no = base_part + (iter_no % self.__num_parts)
 
-            print "Thread", self.__thread_no, "iteration", iter_no, \
-                  "trying partition", part_no, "of", total_parts
+            print("Thread", self.__thread_no, "iteration", iter_no, \
+                  "trying partition", part_no, "of", total_parts)
 
             refactoring = self.__find_refactoring_part(clique, simple,
                                                        timebound,
@@ -198,7 +198,7 @@ class RefactorThread:
                                               partition, num_partitions,
                                               child_collector)
         end_t = default_timer()
-        print "Finding refactoring took", (end_t - start_t), "s"
+        print("Finding refactoring took", (end_t - start_t), "s")
         return refactoring
 
 
@@ -231,7 +231,7 @@ def _clique_refactor(clique, simple, timebound = 60000):
 
     # Initial trim since inherent redundancy could confuse first iteration
     # of refactoring
-    print "Before initial trim has size", original_size, "bytes"
+    print("Before initial trim has size", original_size, "bytes")
     trim_file(clique)
 
     _write_result_clique(clique, simple, num_iters, res_dir, original_size, total_start_t)
@@ -243,10 +243,10 @@ def _clique_refactor(clique, simple, timebound = 60000):
     anneal_prob = INIT_ANNEAL_PROB if anneal_type != AnnealType.none else 1.0
 
     num_threads, num_parts = _calc_num_threads_parts(clique)
-    print "Using", num_threads, "threads and", num_parts, "partitions per thread"
+    print("Using", num_threads, "threads and", num_parts, "partitions per thread")
 
     threads = [ RefactorThread(thread_no, num_threads, num_parts)
-                for thread_no in xrange(num_threads) ]
+                for thread_no in range(num_threads) ]
 
 
     # repeat until we can't find a refactoring
@@ -254,12 +254,12 @@ def _clique_refactor(clique, simple, timebound = 60000):
         num_iters += 1
         size = clique.size()
 
-        print "Searching for refactoring..."
-        print "Beginning with size", size, "bytes"
+        print("Searching for refactoring...")
+        print("Beginning with size", size, "bytes")
 
         ref_type = RefactoringType.best
         if random.random() > anneal_prob:
-            print "Allowing any solution"
+            print("Allowing any solution")
             if anneal_type == AnnealType.good:
                 ref_type = RefactoringType.good
             else:
@@ -284,9 +284,9 @@ def _clique_refactor(clique, simple, timebound = 60000):
                                       timebound,
                                       ref_type,
                                       q, child_collector))
-                             for i in xrange(num_threads) ]
+                             for i in range(num_threads) ]
 
-            for i in xrange(num_threads):
+            for i in range(num_threads):
                 real_threads[i].start()
 
             start_t = default_timer()
@@ -301,20 +301,20 @@ def _clique_refactor(clique, simple, timebound = 60000):
 
             if refactoring is not None:
                 wait_time = WAIT_TIME_FACTOR * (end_t - start_t)
-                print "Waiting up to", wait_time, "s for better refactoring."
+                print("Waiting up to", wait_time, "s for better refactoring.")
                 refactoring = _wait_for_better_refactoring(q,
                                                            refactoring,
                                                            wait_time,
                                                            num_possibilities)
 
-            for i in xrange(num_threads):
+            for i in range(num_threads):
                 real_threads[i].terminate()
-            for i in xrange(num_threads):
+            for i in range(num_threads):
                 real_threads[i].join()
             child_collector.terminate_children()
 
         if refactoring is None:
-            print "No refactoring found"
+            print("No refactoring found")
             break
 
         # lastfile = open("lastone.css", "w")
@@ -324,12 +324,12 @@ def _clique_refactor(clique, simple, timebound = 60000):
         # If refactoring didn't save anything, give up
         if ref_type == RefactoringType.best:
             if refactoring.size < 0:
-                print "WARNING: refactoring estimated size is < 0.  Without a proper estimate of size we may make the file larger."
+                print("WARNING: refactoring estimated size is < 0.  Without a proper estimate of size we may make the file larger.")
             elif refactoring.size >= size:
-                print "Estimated saving is <= 0, not applying refactoring and assuming no further refactoring is possible."
+                print("Estimated saving is <= 0, not applying refactoring and assuming no further refactoring is possible.")
                 break
 
-        print "Applying refactoring: " + str(refactoring)
+        print("Applying refactoring: " + str(refactoring))
 
         refactoring.apply(clique)
 
@@ -345,19 +345,19 @@ def _clique_refactor(clique, simple, timebound = 60000):
         new_size = clique.size()
         pc_saving = operator.truediv((original_size - new_size), original_size) * 100
 
-        print "Removed", (size - new_size), "bytes"
-        print "New size", new_size, \
+        print("Removed", (size - new_size), "bytes")
+        print("New size", new_size, \
               "bytes saves", (original_size - new_size), \
-              "(", pc_saving, "%)"
+              "(", pc_saving, "%)")
 
         # If refactoring didn't save anything, give up
         if ref_type == RefactoringType.best and new_size >= size:
             break;
 
     new_size = clique.size()
-    print "Refactoring complete, new size is", new_size, "bytes"
+    print("Refactoring complete, new size is", new_size, "bytes")
     pc_saving = operator.truediv((original_size - new_size), original_size) * 100
-    print "Saved ", pc_saving, "%"
+    print("Saved ", pc_saving, "%")
 
 def _calc_num_threads_parts(clique):
     """Implements a rough heuristic to guess how many threads and
@@ -438,7 +438,7 @@ def _wait_for_better_refactoring(queue,
                     best_refactoring = new_refactoring
 
         return best_refactoring
-    except Queue.Empty:
+    except queue.Empty:
         pass
 
     return best_refactoring

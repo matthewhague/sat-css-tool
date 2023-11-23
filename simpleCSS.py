@@ -42,7 +42,7 @@ class simpleRule(object):
         return (self.getSelector(),self.getProperty())
 
     def print_rule(self):
-        print str(self.__selector__) + ' { ' + str(self.__property__) + '; }'
+        print(str(self.__selector__) + ' { ' + str(self.__property__) + '; }')
 
     def print_rule_to_file(self,stream):
         stream.write( \
@@ -196,7 +196,7 @@ def minEdge(Edges):
     assert len(Edges) > 0, 'EdgeList is empty'
 
     edge = simpleRule('a','b') # dummy
-    edge.score = sys.maxint
+    edge.score = sys.maxsize
 
     for e in Edges:
         if e.score <= edge.score:
@@ -433,18 +433,18 @@ class simpleCSS(object):
 
         if __DEBUG__:
             Components = self.edgeOrderComponents()
-            print '********START: PRINTING edgeOrder INFORMATION*********'
+            print('********START: PRINTING edgeOrder INFORMATION*********')
             ctr = 0
             for edgeOrder1 in Components:
-                print '@@@@@@ Printing edgeOrder ' + str(ctr)
+                print('@@@@@@ Printing edgeOrder ' + str(ctr))
                 for (edge1,edge2) in edgeOrder1:
-                    print '==='
+                    print('===')
                     edge1.print_rule()
                     edge2.print_rule()
-                    print '==='
-                print '@@@@@@ End printing edgeOrder ' + str(ctr)
+                    print('===')
+                print('@@@@@@ End printing edgeOrder ' + str(ctr))
                 ctr += 1
-            print '********END: PRINTING edgeOrder INFORMATION*********'
+            print('********END: PRINTING edgeOrder INFORMATION*********')
 
 
     def getPropName(self, p):
@@ -590,8 +590,8 @@ class simpleCSS(object):
 
         #print len(edgeSet1)
         #print len(edgeSet2)
-        print len(non_last_rules)
-        print len(last_rules)
+        print(len(non_last_rules))
+        print(len(last_rules))
         #assert False
 
         CSS1 = simpleCSS(edgeSet1,[],non_last_rules)
@@ -870,8 +870,7 @@ class simpleCSS(object):
         return ("Edges:\n\n" +
                 '\n'.join(map(str, self.edgeList)) +
                 "\n\nOrder:\n\n" +
-                '\n'.join(map(lambda (x, y) : str(x) + " < " + str(y),
-                              self.edgeOrder)) +
+                '\n'.join([str(x_y[0]) + " < " + str(x_y[1]) for x_y in self.edgeOrder]) +
                 "\n\nComplex Rules:\n\n" +
                 "\n".join(map(str, self.complexRules)))
 
@@ -1030,7 +1029,7 @@ def main():
     r5 = simpleRule('s2','p3')
     r6 = simpleRule('s4','p2')
     cr = rule(['s1','s2'],['p1','p2'])
-    print r1 in cr
+    print(r1 in cr)
     """CSS = simpleCSS([r1,r2,r3,r4,r5,r6],[(r1,r4)])
     for edge in CIL(CSS):
         edge.print_rule()
