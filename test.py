@@ -744,6 +744,12 @@ class TestEmptiness(unittest.TestCase):
     def test_nth_child_emp_adjacent(self):
         self._do_test(":nth-child(3n) + :not(:nth-child(3n+1))", True)
 
+    def test_last_emp(self):
+        self._do_test(":last-child ~ *", True)
+
+    def test_first_emp(self):
+        self._do_test("* ~ :first-child", True)
+
 
 class TestIntersectionEmptiness(unittest.TestCase):
 

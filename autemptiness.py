@@ -641,7 +641,7 @@ class AutEmptinessChecker:
         worklist = set([(self.aut.qfinal,
                          frozenset(), False, False,
                          frozenset(),
-                         frozenset(), None, 0, False)])
+                         frozenset(), None, 0, True)])
         donelist = set()
 
         # don't need a done list because we only have self-loops and the arrs field
@@ -842,7 +842,7 @@ class AutEmptinessChecker:
             next_pvs
         """
 
-        if next_pvs is None:
+        if pvs is None:
             # always satisfiable!
             return HashableZ3(And())
 
@@ -851,29 +851,46 @@ class AutEmptinessChecker:
 
         of_type = self.of_type or self.last_of_type
 
-        if of_type:
-            for (ns, e) in product(self.nss, self.eles):
-                d = self.__tdelta[(ns,e)]
-                evars.append(d)
-                cons.append(d >= 0)
-                cons.append(Implies(And(pvs.ns == self.nsvals[ns],
-                                        pvs.ele == self.evals[e],
-                                        pvs.pv < next_pvs.pv),
-                                    d >= 1))
-                cons.append(next_pvs.tsumpv[(ns,e)]
-                            ==
-                            pvs.tsumpv[(ns,e)] + d)
-
-        if pdstar:
-            evars.append(self.__delta)
-            cons.append(next_pvs.pv == pvs.pv + pd + self.__delta)
-            cons.append(self.__delta >= 0)
-            if of_type:
-                cons.append(self.__delta + pd == Sum(list(self.__tdelta.values())))
+        if next_pvs is None:
+            # wrt to last if needed
+            if pvs.nlast is not None:
+                if pdstar:
+                    evars.append(self.__delta)
+                    cons.append(pvs.nlast == pvs.pv + pd + self.__delta)
+                    cons.append(self.__delta >= 0)
+                    if of_type:
+                        cons.append(
+                            self.__delta + pd
+                                == Sum(list(self.__tdelta.values()))
+                        )
+                else:
+                    cons.append(pvs.nlast == pvs.pv + pd)
+                    if of_type:
+                        cons.append(pd == Sum(list(self.__tdelta.values())))
         else:
-            cons.append(next_pvs.pv == pvs.pv + pd)
             if of_type:
-                cons.append(pd == Sum(list(self.__tdelta.values())))
+                for (ns, e) in product(self.nss, self.eles):
+                    d = self.__tdelta[(ns,e)]
+                    evars.append(d)
+                    cons.append(d >= 0)
+                    cons.append(Implies(And(pvs.ns == self.nsvals[ns],
+                                            pvs.ele == self.evals[e],
+                                            pvs.pv < next_pvs.pv),
+                                        d >= 1))
+                    cons.append(next_pvs.tsumpv[(ns,e)]
+                                ==
+                                pvs.tsumpv[(ns,e)] + d)
+
+            if pdstar:
+                evars.append(self.__delta)
+                cons.append(next_pvs.pv == pvs.pv + pd + self.__delta)
+                cons.append(self.__delta >= 0)
+                if of_type:
+                    cons.append(self.__delta + pd == Sum(list(self.__tdelta.values())))
+            else:
+                cons.append(next_pvs.pv == pvs.pv + pd)
+                if of_type:
+                    cons.append(pd == Sum(list(self.__tdelta.values())))
 
         if len(evars) > 0:
             return HashableZ3(Exists(evars, And(cons)))
