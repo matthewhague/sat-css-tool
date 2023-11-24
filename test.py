@@ -744,6 +744,12 @@ class TestEmptiness(unittest.TestCase):
     def test_nth_child_emp_adjacent(self):
         self._do_test(":nth-child(3n) + :not(:nth-child(3n+1))", True)
 
+    def test_first_of_type_emp(self):
+        self._do_test("a|e ~ a|e:first-of-type", True)
+
+    def test_last_of_type_emp(self):
+        self._do_test("a|e:last-of-type ~ a|e", True)
+
     def test_last_emp(self):
         self._do_test(":last-child ~ *", True)
 

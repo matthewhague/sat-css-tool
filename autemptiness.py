@@ -109,7 +109,8 @@ def isempty_optimised(aut, data=None):
     """
     naut = _normalise_automaton(aut)
     checker = AutEmptinessChecker(naut)
-    return checker.check()
+    res = checker.check()
+    return res
 
 def _normalise_automaton(aut):
     """Builds a new normalised automaton without class, local pseudo,
@@ -641,7 +642,7 @@ class AutEmptinessChecker:
         worklist = set([(self.aut.qfinal,
                          frozenset(), False, False,
                          frozenset(),
-                         frozenset(), None, 0, True)])
+                         frozenset(), None, 0, True, ())])
         donelist = set()
 
         # don't need a done list because we only have self-loops and the arrs field
@@ -652,8 +653,8 @@ class AutEmptinessChecker:
             (q,
              ids, targ, root,
              arrs,
-             pos_cons, pvs, pd, pdstar) = oldtup
-            donelist.add(oldtup)
+             pos_cons, pvs, pd, pdstar, trail) = oldtup
+            donelist.add(oldtup[:-1])
 
             for t in self.aut.trans[q]:
                 if root and not t.arrow == Arrow.noop:
@@ -737,9 +738,10 @@ class AutEmptinessChecker:
                     newtup = (t.q1,
                               frozenset(ids.union(tids)), targ or ttarg, troot,
                               frozenset(new_arrs),
-                              frozenset(new_pos_cons), new_pvs, new_pd, new_pdstar)
+                              frozenset(new_pos_cons), new_pvs, new_pd, new_pdstar,
+                              (t,) + trail)
 
-                    if newtup not in donelist:
+                    if newtup[:-1] not in donelist:
                         worklist.add(newtup)
 
         # we abort early if we find q0 (which would show non-emp)
@@ -792,7 +794,7 @@ class AutEmptinessChecker:
         :param pos_cons:
             A set of HashableZ3 equations (x + d + 1) &c.
         :param pvs:
-            The PositionVariables of the next node that has one (Z3 Int var)
+            The PositionVariables of the next node that has one
         :param pd:
             The fixed part of the distance to the next pv (Integer)
         :param pdstar:
@@ -903,9 +905,6 @@ class AutEmptinessChecker:
         :param sel:
             A cssselect parsed_tree selector normalised and with no numeric
             constraints such as nth-child.
-        :param pv:
-            Variable giving the position of the node if already determined, else
-            None (HashableZ3)
         :returns:
             (sat, ids, targ, root, empty, pos_cons, node_pos)
             sat is True iff the local part of the selector can be satisfied
@@ -1073,7 +1072,11 @@ class AutEmptinessChecker:
                    (None, s.element) in neg_nsele) and
                ps.isdisjoint(neg_ps))
 
-        if (self.of_type or self.last_of_type) and pvs is not None:
+        if (self.of_type or self.last_of_type):
+            if pvs is None:
+                (pvs, new_cons) = self.__create_new_pvs()
+                pos_cons |= new_cons
+
             if s.element is not None:
                 pos_cons.add(HashableZ3(pvs.ele == self.evals[s.element]))
             if s.namespace is not None:
@@ -1312,11 +1315,11 @@ def isempty_unoptimised(aut, data=None):
     naut = _normalise_automaton(aut)
     _emp_z3.push()
 
-    enc = _Z3NormAutEnc(naut, _emp_z3)
+    _Z3NormAutEnc(naut, _emp_z3)
     # Uncomment these if you want to inspect the formulas
-    #print aut
+    #print(aut)
     #set_option(max_args=10000000, max_lines=1000000, max_depth=10000000, max_visited=1000000)
-    #print solver
+    #print(_emp_z3)
     start_t = default_timer()
     res = _emp_z3.check()
     end_t = default_timer()
@@ -1687,7 +1690,8 @@ class _Z3NormAutEnc:
         if self.last:
             for v in self.nlchild:
                 self.solver.append(v > 0)
-        # of type can be 0 too
+        # of type can be 0 too, but should be at least 1 if a position
+        # is of a given type
         if self.of_type:
             for vs in self.ntchild.values():
                 for v in vs:
@@ -1697,6 +1701,13 @@ class _Z3NormAutEnc:
                 self.solver.append(self.nchild[i]
                                    ==
                                    Sum([vs[i] for vs in self.ntchild.values()]))
+                for ns in self.nsvals:
+                    for e in self.evals:
+                        self.solver.append(
+                            Implies(And(self.nsvars[i] == self.nsvals[ns],
+                                        self.evars[i] == self.evals[e]),
+                                    self.ntchild[(ns, e)][i] >= 1)
+                        )
 
         if self.last_of_type:
             for vs in self.nltchild.values():
@@ -1707,6 +1718,13 @@ class _Z3NormAutEnc:
                 self.solver.append(self.nlchild[i]
                                    ==
                                    Sum([vs[i] for vs in self.nltchild.values()]))
+                for ns in self.nsvals:
+                    for e in self.evals:
+                        self.solver.append(
+                            Implies(And(self.nsvars[i] == self.nsvals[ns],
+                                        self.evars[i] == self.evals[e]),
+                                    self.nltchild[(ns, e)][i] >= 1)
+                        )
 
         # unique target and IDs
         for i in range(self.n):
