@@ -27,7 +27,7 @@ Can also be used to test whether two selectors may match the same node in some D
 Can also be used as a tool/library for building an abstract
 representation of a CSS file as a set of pairs (selector, declaration)
 with an ordering (representing the order selectors must appear in the
-CSS file to maintain the overriding semantics).  
+CSS file to maintain the overriding semantics).
 
 ## Requirements:
 
@@ -43,6 +43,9 @@ Python 3.7 or compatible.
 Borrowed and modified code from
 
 * [cssselect 0.9.1](https://pypi.python.org/pypi/cssselect)
+
+The recommended build system is [Poetry](https://python-poetry.org/). Tested
+with version 1.7.0.
 
 ## External Requirements
 
