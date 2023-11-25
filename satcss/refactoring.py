@@ -5,7 +5,7 @@ independently."""
 
 import bisect
 
-from simpleCSS import simpleRule
+from satcss.simpleCSS import simpleRule
 
 
 def trim_file(clique):

@@ -6,14 +6,13 @@ import copy
 from enum import Enum
 from collections import defaultdict
 
-import cssselect_parser
-from cssselect_parser import Element
-from lxml import etree
+import satcss.cssselect_parser as cssselect_parser
+from satcss.cssselect_parser import Element
 # yeah -- using two cssselector libraries, but one has the AST the other does
 # matching...
 from lxml.cssselect import CSSSelector
 
-import cssfile
+import satcss.cssfile as cssfile
 
 # * selector for convenience
 _isany = cssselect_parser.parse("*").pop().parsed_tree

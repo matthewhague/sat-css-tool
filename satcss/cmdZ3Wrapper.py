@@ -7,7 +7,6 @@ Note: Only currently supports bools
 import abc
 from subprocess import Popen, PIPE
 import re
-import sys
 import os
 
 from z3 import sat, unsat

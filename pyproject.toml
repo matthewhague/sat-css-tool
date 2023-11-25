@@ -1,0 +1,38 @@
+[tool.poetry]
+name = "SatCSS"
+version = "0.1.0"
+description = "Minimise CSS files through semantics preserving refactoring"
+authors = [
+    "Matthew Hague <matthew.hague at rhul.ac.uk>",
+    "Anthony Widjaja Lin <anthony.w.to@gmail.com>"
+]
+readme = "README.md"
+repository = "https://github.com/matthewhague/sat-css-tool"
+packages = [
+    { include = "satcss" }
+]
+keywords = [
+    "CSS",
+    "Minification",
+    "Refactoring",
+    "Constraint Solving",
+    "MaxSAT",
+    "Web Optimisation"
+]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+cssselect = "1.2.0"
+docopt = "0.6.2"
+lxml = "4.9.2"
+tinycss2 = "1.2.1"
+toposort = "1.10"
+z3-solver = "4.12.2.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+satcss = "satcss.main:main"
+test = "satcss.test:test"

@@ -6,7 +6,7 @@ from itertools import islice
 from math import ceil
 
 import tinycss2
-import cssselect_parser
+import satcss.cssselect_parser as cssselect_parser
 
 # Let's assume this will never appear in any CSS file...
 multiprop_separator = "#+#"

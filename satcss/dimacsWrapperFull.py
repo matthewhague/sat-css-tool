@@ -9,8 +9,6 @@ where v is a variable that is true iff the whole formula is true
 
 from subprocess import Popen, PIPE
 
-import sys
-
 __variableCounter__ = 0 # Number of boolean variables
 memo = {} # keep track of variables that are defined
 
@@ -145,7 +143,7 @@ class Solver(object):
 
     def __init__(self,solver = ""):
         if solver == "":
-            from main import get_commandline_solver
+            from satcss.main import get_commandline_solver
             self.__solver__ = get_commandline_solver()
         else:
             self.__solver__ = solver

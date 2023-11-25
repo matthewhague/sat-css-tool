@@ -29,18 +29,16 @@ representation of a CSS file as a set of pairs (selector, declaration)
 with an ordering (representing the order selectors must appear in the
 CSS file to maintain the overriding semantics).  
 
-
 ## Requirements:
 
-(Possibly a superset)
+Python 3.7 or compatible.
 
-* [cssselect 0.9.1](https://pypi.python.org/pypi/cssselect)
+* [cssselect 1.2.0](https://pypi.python.org/pypi/cssselect)
 * [docopt 0.6.2](https://pypi.python.org/pypi/docopt)
-* [enum34](https://pypi.python.org/pypi/enum34)
-* [lxml 3.4.4](https://pypi.python.org/pypi/lxml)
-* [tinycss2 0.6.1](https://pypi.python.org/pypi/tinycss2)
-* [toposort 1.5](https://pypi.org/project/toposort/)
-* [z3](http://research.microsoft.com/en-us/um/redmond/projects/z3/z3.html)
+* [lxml 4.9.2](https://pypi.python.org/pypi/lxml)
+* [tinycss2 1.2.1](https://pypi.python.org/pypi/tinycss2)
+* [toposort 1.10](https://pypi.org/project/toposort/)
+* [z3-solver 4.12.2.0](http://research.microsoft.com/en-us/um/redmond/projects/z3/z3.html)
 
 Borrowed and modified code from
 
@@ -48,27 +46,45 @@ Borrowed and modified code from
 
 ## External Requirements
 
-In the same directory as main.py, ensure that running 
+In the same directory as satcss/main.py, ensure that running 
 
     ./z3
 
-runs the Z3 SMT solver.  For example, this can be a simlink to the
+runs the Z3 SMT solver.  For example, this can be a symlink to the
 Z3 installed on your machine.  
 
-The tool uses Z3 v4.5.  There have recently been changes to the Z3 API
-for weighted Max-SAT.  Hence, the most up-to-date version as of
-22/08/2017 is required.
+The tool was last tested with Z3 v4.12.2.0.
 
-## Running
+## Running with Poetry
 
-    python main.py --help
+To setup and run the project with Poetry, from the root directory run
 
-where "python" is your python 2.7 command.
+    poetry install
+
+Then
+
+    poetry run satcss --help
 
 To try a benchmark:
 
-    python main.py benchmarks/dblp-2015-07-09-stripmq.css
+    poetry run satcss benchmarks/dblp-2015-07-09-stripmq.css
 
 To output the file:
 
-    python main.py -o --file=blah.min.css benchmarks/dblp-2015-07-09-stripmq.css 
+    poetry run satcss -o --file=blah.min.css benchmarks/dblp-2015-07-09-stripmq.css
+
+## Running without Poetry
+
+Two scripts `main.py` and `test.py` are provided in the root directory for
+running without Poetry. First install the requirements manually. You can use
+`requirements.txt`.
+
+    pip install -r requirements.txt
+
+Then run
+
+    python main.py --help
+
+where "python" is your python 3.7 or above command.
+
+

@@ -15,7 +15,6 @@ from subprocess import Popen, PIPE
 from tempfile import mkstemp
 from os import fdopen
 
-import sys
 import signal
 
 __variableCounter__ = 0 # Number of boolean variables
@@ -114,11 +113,11 @@ class Optimize(object):
 
     def __init__(self,solver = ""):
         if solver == "":
-            from main import get_dimacs_output
+            from satcss.main import get_dimacs_output
             if get_dimacs_output():
                 self.__solver__ = OUTPUT_AND_EXIT
             else:
-                from main import get_commandline_solver
+                from satcss.main import get_commandline_solver
                 self.__solver__ = get_commandline_solver()
         else:
             self.__solver__ = solver

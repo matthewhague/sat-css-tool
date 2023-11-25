@@ -6,16 +6,14 @@ from collections import defaultdict
 from timeit import default_timer
 from itertools import product
 
-import z3
-import cmdZ3Wrapper
-import wcnfWrapper
+import satcss.cmdZ3Wrapper
+import satcss.wcnfWrapper
 
-_z3 = cmdZ3Wrapper
+_z3 = satcss.cmdZ3Wrapper
 
-from z3int import Z3BinInt
-from simpleCSS import simpleRule
-from refactoring import Refactoring
-from cnflib import *
+from satcss.simpleCSS import simpleRule
+from satcss.refactoring import Refactoring
+from satcss.cnflib import *
 
 MAX_SPLIT_FACTOR = 0#.3
 
@@ -121,15 +119,15 @@ def all_in_find_refactoring(clique, simple,
     global _z3
 
     # Have to do this here because of import deps -- apologies for hackiness!
-    from main import get_dimacs_output
+    from satcss.main import get_dimacs_output
     if get_dimacs_output():
-        _z3 = wcnfWrapper
+        _z3 = satcss.wcnfWrapper
     optimizer = get_optimizer()
 
     optimizer.push()
 
     print("Building encoding...")
-    from main import get_no_bicliques
+    from satcss.main import get_no_bicliques
     start_t = default_timer()
     encoder = (_Z3EncoderBiclique(clique, simple, partition, num_partitions)
                if not get_no_bicliques()
@@ -221,7 +219,7 @@ class _Z3EncoderBiclique(object):
         print("Getting bicliques...")
         start_t = default_timer()
 
-        from main import get_unlim_bicliques
+        from satcss.main import get_unlim_bicliques
         split_factor = -1 if get_unlim_bicliques() else MAX_SPLIT_FACTOR
 
         (max_bicliques, forbidden) = clique.get_orderable_max_bicliques(simple, split_factor)
@@ -268,7 +266,7 @@ class _Z3EncoderBiclique(object):
         self.max_s_i = 0
         self.max_p_i = 0
 
-        from main import get_full_exclusion
+        from satcss.main import get_full_exclusion
         full_ex = get_full_exclusion()
 
         for (ss, pp) in self.bicliques:

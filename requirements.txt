@@ -1,0 +1,6 @@
+cssselect==1.2.0
+docopt==0.6.2
+lxml==4.9.2
+tinycss2==1.2.1
+toposort==1.10
+z3-solver==4.12.2.0

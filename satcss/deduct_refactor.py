@@ -9,22 +9,19 @@ Note: Two implementations are available.  See _Z3EncoderSimple and
       _Z3EncoderBiclique.  The latter seems to work best.
 """
 
-import copy
 from timeit import default_timer
-from math import ceil, log
+from math import ceil
 import operator
 from enum import Enum
 import random
 import multiprocessing
-import queue
 import os
 import shutil
 
-import simplecssbuilder
-from refactoring import *
-from all_in_deduct_refactor import all_in_find_refactoring, RefactoringType
-from safetrim import safe_trim
-from childcollector import ChildCollector
+import satcss.simplecssbuilder as simplecssbuilder
+from satcss.refactoring import *
+from satcss.all_in_deduct_refactor import all_in_find_refactoring, RefactoringType
+from satcss.childcollector import ChildCollector
 
 INIT_ANNEAL_PROB = 0.5
 ANNEAL_DELTA = 0.001
@@ -56,7 +53,7 @@ def refactor(css, timebound = 60000):
     print("Building cliqueCSS...")
     (simple, clique) = simplecssbuilder.fromcssfile(css, make_clique_css = True)
 
-    from main import get_output_simple, get_dont_refactor
+    from satcss.main import get_output_simple, get_dont_refactor
     if get_output_simple():
         print("Simple CSS:")
         print(str(simple))
@@ -221,7 +218,7 @@ def _clique_refactor(clique, simple, timebound = 60000):
     total_start_t = default_timer()
     num_iters = 0
 
-    from main import get_intermediates_directory
+    from satcss.main import get_intermediates_directory
     res_dir = get_intermediates_directory()
     _setup_results_directory(res_dir)
 
@@ -237,7 +234,7 @@ def _clique_refactor(clique, simple, timebound = 60000):
     _write_result_clique(clique, simple, num_iters, res_dir, original_size, total_start_t)
 
     random.seed()
-    from main import get_anneal
+    from satcss.main import get_anneal
     anneal_type = get_anneal()
 
     anneal_prob = INIT_ANNEAL_PROB if anneal_type != AnnealType.none else 1.0
@@ -371,7 +368,7 @@ def _calc_num_threads_parts(clique):
         where threads is the number of threads to use
         and parts is the number of parts per thread
     """
-    from main import get_num_threads, get_num_parts
+    from satcss.main import get_num_threads, get_num_parts
     num_threads = get_num_threads()
     num_parts = get_num_parts()
 

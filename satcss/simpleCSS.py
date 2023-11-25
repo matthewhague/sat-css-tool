@@ -4,14 +4,12 @@ This is a stub for the simpleCSS class. Not completely done yet. """
 import copy
 import sys
 import random
-import functools
 
-import cliqueCSS
-from timeit import default_timer
+import satcss.cliqueCSS as cliqueCSS
 from collections import defaultdict
 from itertools import product
 
-from toposort import toposort, toposort_flatten
+from toposort import toposort_flatten
 
 __DEBUG__= False
 
@@ -740,7 +738,7 @@ class simpleCSS(object):
         """
         name1 = p1.split(':')[0]
         name2 = p2.split(':')[0]
-        from simplecssbuilder import related_props
+        from satcss.simplecssbuilder import related_props
         return related_props(name1, name2)
 
     def get_orderable_sub_max_bicliques(self, ss, pp, ignore_rules = set(), max_split = -1):

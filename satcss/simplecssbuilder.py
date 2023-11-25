@@ -4,13 +4,12 @@ purposes"""
 from itertools import combinations
 from timeit import default_timer
 
-import cssfile
-from cssfile import CSSFile
-from simpleCSS import *
-import cssautomaton
-import autemptiness
-from cliqueCSS import *
-import cssselect_parser
+import satcss.cssfile as cssfile
+from satcss.simpleCSS import *
+import satcss.cssautomaton as cssautomaton
+import satcss.autemptiness as autemptiness
+from satcss.cliqueCSS import *
+import satcss.cssselect_parser as cssselect_parser
 
 __DEBUG__ = True
 
@@ -193,7 +192,7 @@ def fromcssfile(css, make_clique_css = False):
     order = set()
 
     # get ordering
-    from main import get_no_ordering
+    from satcss.main import get_no_ordering
     if not get_no_ordering():
         for p in css.get_props():
             for spec in css.get_specificities(p):

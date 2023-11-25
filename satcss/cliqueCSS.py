@@ -3,8 +3,8 @@
 from itertools import product
 from collections import defaultdict
 
-from cssfile import selector_str
-import simpleCSS as Sim
+from satcss.cssfile import selector_str
+import satcss.simpleCSS as Sim
 
 __DEBUG__ = True
 
@@ -519,7 +519,7 @@ class cliqueCSS:
 
             print("There were", len(max_bicliques), " max bicliques, eventually orderable", len(all_bicliques))
 
-        from main import get_enumeration_output
+        from satcss.main import get_enumeration_output
         if get_enumeration_output():
             print("Enumeration of bicliques Mi:")
             for (i, bc) in enumerate(all_bicliques):

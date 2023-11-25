@@ -8,10 +8,10 @@ from timeit import default_timer
 
 from z3 import *
 
-import cssfile
-import cssautomaton
-from cssautomaton import CSSAutomaton, Tran, Arrow
-import stringcons
+import satcss.cssfile as cssfile
+import satcss.stringcons as stringcons
+
+from satcss.cssautomaton import CSSAutomaton, Tran, Arrow
 
 # define specified id and class attribute names and namespaces
 # None is really default, but assuming we're just going to get CSS for HTML
@@ -91,7 +91,7 @@ def isempty(aut, data=None):
     :returns:
         True iff the automaton is empty
     """
-    from main import get_unopt_emp
+    from satcss.main import get_unopt_emp
     if get_unopt_emp():
         return isempty_unoptimised(aut, data)
     else:
