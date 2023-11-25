@@ -90,4 +90,10 @@ Then run
 
 where "python" is your python 3.7 or above command.
 
+## TOPLAS Version
 
+The version current as of the [TOPLAS paper][toplas] is tagged
+[TOPLAS-Release][toplasrelease].
+
+[toplas]: https://github.com/matthewhague/sat-css-tool/releases/tag/TOPLAS-Release
+[toplasrelease]: https://github.com/matthewhague/sat-css-tool/releases/tag/TOPLAS-Release
