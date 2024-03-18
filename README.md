@@ -29,6 +29,11 @@ representation of a CSS file as a set of pairs (selector, declaration)
 with an ordering (representing the order selectors must appear in the
 CSS file to maintain the overriding semantics).
 
+## Research
+
+This repository is an example implementation of a rule-merging algorithm, which is
+further explained in [CSS Minification via Constraint Solving][toplas]
+
 ## Requirements:
 
 Python 3.7 or compatible.
@@ -95,5 +100,5 @@ where "python" is your python 3.7 or above command.
 The version current as of the [TOPLAS paper][toplas] is tagged
 [TOPLAS-Release][toplasrelease].
 
-[toplas]: https://github.com/matthewhague/sat-css-tool/releases/tag/TOPLAS-Release
+[toplas]: https://dl.acm.org/doi/10.1145/3310337
 [toplasrelease]: https://github.com/matthewhague/sat-css-tool/releases/tag/TOPLAS-Release
